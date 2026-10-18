@@ -746,9 +746,9 @@ onMounted(async () => {
     >
       <div
         v-if="isSelectionMode"
-        class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-110 sm:max-w-lg px-3 select-none"
+        class="fixed bottom-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+0.75rem))] sm:bottom-8 left-1/2 -translate-x-1/2 z-40 w-full max-w-110 sm:max-w-lg px-3 select-none"
       >
-        <div class="p-2 sm:p-2.5 rounded-3xl bg-surface/95 dark:bg-[#20151C]/95 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-between gap-1 sm:gap-2">
+        <div class="p-2 sm:p-2.5 rounded-3xl bg-white/95 dark:bg-[#2A1D24]/95 text-app backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-between gap-1 sm:gap-2">
           <!-- Left Info & Select All & Cancel -->
           <div class="flex items-center gap-1.5 sm:gap-2 pl-1.5 min-w-0">
             <button

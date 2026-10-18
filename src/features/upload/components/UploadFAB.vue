@@ -4,7 +4,7 @@ import { onClickOutside } from '@vueuse/core';
 import { useUploadStore } from '../stores/upload.store';
 import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useToast } from '@/composables/useToast';
-import { Plus, UploadCloud, FileUp, FolderUp, FolderPlus } from 'lucide-vue-next';
+import { Plus, UploadCloud, FileUp, FolderPlus } from 'lucide-vue-next';
 
 withDefaults(
   defineProps<{
@@ -191,7 +191,7 @@ onUnmounted(() => {
     <div
       v-else-if="!hideMainFab"
       ref="fabContainerRef"
-      class="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-35 flex flex-col items-end gap-3"
+      class="fixed bottom-24 sm:bottom-28 right-4 sm:right-6 z-35 flex flex-col items-end gap-3"
     >
       <!-- Speed Dial Menu (Expanded Options) -->
       <Transition
@@ -218,21 +218,6 @@ onUnmounted(() => {
               @click="handleCreateFolderClick"
             >
               <FolderPlus class="w-5 h-5" />
-            </button>
-          </div>
-
-          <!-- Option: Upload Folder -->
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-surface/95 shadow-md text-xs font-semibold text-app select-none">
-              Upload Satu Folder
-            </span>
-            <button
-              type="button"
-              class="w-11 h-11 rounded-full bg-surface shadow-md text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
-              aria-label="Upload satu folder dari komputer"
-              @click="triggerFolderInput"
-            >
-              <FolderUp class="w-5 h-5" />
             </button>
           </div>
 

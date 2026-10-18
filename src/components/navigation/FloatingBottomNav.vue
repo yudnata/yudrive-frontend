@@ -21,11 +21,11 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-100 sm:max-w-md px-3 select-none pointer-events-none"
+    class="fixed bottom-[max(1.25rem,calc(env(safe-area-inset-bottom,0px)+0.75rem))] sm:bottom-8 left-1/2 -translate-x-1/2 z-40 w-full max-w-100 sm:max-w-md px-3 select-none pointer-events-none"
   >
     <!-- Main Floating Tab Bar -->
     <nav
-      class="pointer-events-auto bg-surface/90 dark:bg-[#20151C]/90 backdrop-blur-xl shadow-2xl rounded-full p-1 sm:p-1.5 flex items-center justify-between ring-1 ring-black/5 dark:ring-white/10"
+      class="pointer-events-auto bg-white/95 dark:bg-[#2A1D24]/95 text-app backdrop-blur-xl shadow-2xl rounded-full p-1 sm:p-1.5 flex items-center justify-between ring-1 ring-black/5 dark:ring-white/10"
       aria-label="Navigasi utama"
     >
       <!-- Tab 1: Beranda / Bento Home -->
