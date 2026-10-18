@@ -6,7 +6,7 @@ import { useToast } from '@/composables/useToast';
 import Card from '@/components/ui/Card.vue';
 import Input from '@/components/ui/Input.vue';
 import Button from '@/components/ui/Button.vue';
-import { Heart, Mail, Lock, Coffee } from 'lucide-vue-next';
+import { Heart, Mail, Lock, Coffee, Eye, EyeOff } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -16,6 +16,7 @@ const email = ref('');
 const password = ref('');
 const error = ref('');
 const rememberMe = ref(true);
+const showPassword = ref(false);
 
 onMounted(() => {
   const savedEmail = localStorage.getItem('remembered_email');
@@ -50,9 +51,9 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 bg-linear-to-b from-[#FFF7F9] via-[#FFF7F9] to-[#FFEEF3] dark:from-[#1E1419] dark:via-[#1E1419] dark:to-[#2A1D24]">
+  <div class="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-[#1E1419]">
     <div class="w-full max-w-md">
-      <Card rounded="lg" class="p-8 sm:p-10">
+      <Card rounded="lg" class="p-8 sm:p-10 bg-white dark:bg-[#2A1D24] shadow-soft border border-app">
         <!-- Logo & Header -->
         <div class="text-center mb-8">
           <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-[#FFD9E3] dark:bg-[#4A2635] flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE]">
@@ -108,13 +109,24 @@ async function onSubmit() {
             id="login-password"
             v-model="password"
             label="Kata Sandi"
-            type="password"
+            :type="showPassword ? 'text' : 'password'"
             placeholder="••••••••"
             required
             autocomplete="current-password"
           >
             <template #leading>
               <Lock class="w-4 h-4" />
+            </template>
+            <template #trailing>
+              <button
+                type="button"
+                class="p-1 text-muted hover:text-app transition-colors focus:outline-none min-h-8 min-w-8 flex items-center justify-center cursor-pointer"
+                :aria-label="showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'"
+                @click="showPassword = !showPassword"
+              >
+                <EyeOff v-if="showPassword" class="w-4 h-4" />
+                <Eye v-else class="w-4 h-4" />
+              </button>
             </template>
           </Input>
 

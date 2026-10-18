@@ -5,7 +5,7 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 const THEME_STORAGE_KEY = 'theme_preference';
 
 const currentTheme = ref<ThemePreference>(
-  (localStorage.getItem(THEME_STORAGE_KEY) as ThemePreference) || 'system'
+  (localStorage.getItem(THEME_STORAGE_KEY) as ThemePreference) || 'light'
 );
 
 function applyTheme(pref: ThemePreference) {
