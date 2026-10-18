@@ -2,20 +2,22 @@
 import { ref, watch } from 'vue';
 import Button from '@/components/ui/Button.vue';
 import Input from '@/components/ui/Input.vue';
-import { FolderPlus, X } from 'lucide-vue-next';
+import { FolderPlus, X, CalendarHeart } from 'lucide-vue-next';
 
 const props = defineProps<{
   isOpen: boolean;
   initialName?: string;
+  initialEventDate?: string | null;
   isRenaming?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: 'save', name: string): void;
+  (e: 'save', name: string, eventDate: string | null): void;
   (e: 'close'): void;
 }>();
 
 const folderName = ref('');
+const eventDate = ref('');
 const error = ref('');
 const isSubmitting = ref(false);
 
@@ -24,6 +26,7 @@ watch(
   (open) => {
     if (open) {
       folderName.value = props.initialName || '';
+      eventDate.value = props.initialEventDate || '';
       error.value = '';
       isSubmitting.value = false;
     }
@@ -36,7 +39,7 @@ function handleSubmit() {
     error.value = 'Silakan masukkan nama folder.';
     return;
   }
-  emit('save', trimmed);
+  emit('save', trimmed, eventDate.value || null);
 }
 </script>
 
@@ -49,7 +52,7 @@ function handleSubmit() {
       aria-modal="true"
     >
       <div
-        class="w-full max-w-sm rounded-3xl bg-surface shadow-2xl p-6 sm:p-7 text-left transform transition-all"
+        class="w-full max-w-sm rounded-3xl bg-surface shadow-2xl p-6 sm:p-7 text-left transform transition-all ring-1 ring-black/5 dark:ring-white/10"
         @click.stop
       >
         <div class="flex items-center justify-between mb-5">
@@ -79,6 +82,33 @@ function handleSubmit() {
             :error="error"
             autofocus
           />
+
+          <!-- Optional Event Date -->
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between">
+              <label for="folder-event-date" class="text-xs font-semibold text-app flex items-center gap-1.5">
+                <CalendarHeart class="w-3.5 h-3.5 text-[#C93D68] dark:text-[#FF8FAE]" />
+                Tanggal Kejadian (Opsional)
+              </label>
+              <button
+                v-if="eventDate"
+                type="button"
+                class="text-[11px] text-[#D64545] hover:underline cursor-pointer"
+                @click="eventDate = ''"
+              >
+                Hapus
+              </button>
+            </div>
+            <input
+              id="folder-event-date"
+              v-model="eventDate"
+              type="date"
+              class="w-full px-3.5 py-2.5 text-xs rounded-xl bg-surface-tint ring-1 ring-black/5 dark:ring-white/10 text-app focus:outline-none focus:ring-2 focus:ring-[#FF8FAE] transition-all"
+            />
+            <p class="text-[11px] text-muted leading-tight">
+              Akan otomatis terhubung dan tampil di tab Kalender Kenangan.
+            </p>
+          </div>
 
           <div class="flex items-center justify-end gap-2.5 pt-2">
             <Button

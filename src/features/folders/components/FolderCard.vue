@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { onClickOutside } from '@vueuse/core';
 import { Folder as FolderType } from '@/types';
 import { Folder as FolderIcon, MoreVertical, Info, Edit2, Trash2, Image as ImageIcon } from 'lucide-vue-next';
+import { formatEventDate } from '@/utils/date';
 
 const props = defineProps<{
   folder: FolderType;
@@ -139,8 +140,12 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
         <h3 class="text-sm font-semibold text-app truncate tracking-tight">
           {{ folder.name }}
         </h3>
-        <p class="text-[11px] text-muted truncate mt-0.5">
-          {{ formatBytes(folder.totalBytes) }}
+        <p class="text-[11px] text-muted truncate mt-0.5 flex items-center gap-1.5">
+          <span>{{ formatBytes(folder.totalBytes) }}</span>
+          <template v-if="folder.eventDate">
+            <span class="text-muted/40">•</span>
+            <span class="text-[#C93D68] dark:text-[#FF8FAE] font-medium">{{ formatEventDate(folder.eventDate) }}</span>
+          </template>
         </p>
       </div>
 

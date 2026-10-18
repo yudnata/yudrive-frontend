@@ -33,6 +33,7 @@ export interface Folder {
   parentId?: string | null;
   coverMediaId?: string | null;
   coverUrl?: string | null;
+  eventDate?: string | null;
   itemCount: number;
   totalBytes: number;
   createdAt: string;

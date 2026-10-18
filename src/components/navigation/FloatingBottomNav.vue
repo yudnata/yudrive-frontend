@@ -4,6 +4,7 @@ import { onClickOutside } from '@vueuse/core';
 import {
   Sparkles,
   Folder as FolderIcon,
+  CalendarHeart,
   Plus,
   Images,
   Heart,
@@ -12,7 +13,7 @@ import {
   FileUp,
 } from 'lucide-vue-next';
 
-export type NavTab = 'home' | 'folders' | 'gallery' | 'favorites';
+export type NavTab = 'home' | 'folders' | 'calendar' | 'gallery' | 'favorites';
 
 defineProps<{
   modelValue: NavTab;
@@ -48,7 +49,7 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
 <template>
   <div
     ref="navRef"
-    class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-sm sm:max-w-md px-3 select-none pointer-events-none"
+    class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[420px] sm:max-w-lg px-2 sm:px-3 select-none pointer-events-none"
   >
     <!-- Speed Dial Popup Menu (Directly above the center + button) -->
     <Transition
@@ -100,7 +101,7 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
 
     <!-- Main Floating Dock -->
     <nav
-      class="pointer-events-auto bg-surface/90 backdrop-blur-xl shadow-2xl rounded-full p-1.5 sm:p-2 flex items-center justify-between ring-1 ring-black/5 dark:ring-white/10"
+      class="pointer-events-auto bg-surface/90 backdrop-blur-xl shadow-2xl rounded-full p-1 sm:p-1.5 flex items-center justify-between ring-1 ring-black/5 dark:ring-white/10"
       aria-label="Navigasi utama"
     >
       <!-- Tab 1: Beranda / Bento Home -->
@@ -111,8 +112,8 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
         aria-label="Beranda kenangan"
         @click="emit('update:modelValue', 'home')"
       >
-        <Sparkles class="w-4 h-4 sm:w-5 sm:h-5 transition-transform" :class="{ 'scale-110': modelValue === 'home' }" />
-        <span class="text-[10px] tracking-tight">Beranda</span>
+        <Sparkles class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'home' }" />
+        <span class="text-[9.5px] sm:text-[10px] tracking-tight">Beranda</span>
         <span
           v-if="modelValue === 'home'"
           class="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE]"
@@ -127,30 +128,46 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
         aria-label="Jelajah folder kenangan"
         @click="emit('update:modelValue', 'folders')"
       >
-        <FolderIcon class="w-4 h-4 sm:w-5 sm:h-5 transition-transform" :class="{ 'scale-110': modelValue === 'folders' }" />
-        <span class="text-[10px] tracking-tight">Folder</span>
+        <FolderIcon class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'folders' }" />
+        <span class="text-[9.5px] sm:text-[10px] tracking-tight">Folder</span>
         <span
           v-if="modelValue === 'folders'"
           class="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE]"
         />
       </button>
 
+      <!-- Tab 3: Kalender Kenangan -->
+      <button
+        type="button"
+        class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
+        :class="modelValue === 'calendar' ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold' : 'text-muted hover:text-app'"
+        aria-label="Kalender momen dan kenangan"
+        @click="emit('update:modelValue', 'calendar')"
+      >
+        <CalendarHeart class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'calendar' }" />
+        <span class="text-[9.5px] sm:text-[10px] tracking-tight">Kalender</span>
+        <span
+          v-if="modelValue === 'calendar'"
+          class="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE]"
+        />
+      </button>
+
       <!-- Center Action: Unggah (+) -->
-      <div class="px-1 shrink-0">
+      <div class="px-0.5 shrink-0">
         <button
           type="button"
-          class="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-linear-to-tr from-[#FF9BB5] to-[#E0527A] text-white shadow-soft flex items-center justify-center transition-transform hover:scale-105 active:scale-95 focus:outline-none cursor-pointer"
+          class="w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-linear-to-tr from-[#FF9BB5] to-[#E0527A] text-white shadow-soft flex items-center justify-center transition-transform hover:scale-105 active:scale-95 focus:outline-none cursor-pointer"
           aria-label="Menu upload dan buat folder"
           @click="isMenuOpen = !isMenuOpen"
         >
           <Plus
-            class="w-6 h-6 stroke-[2.5] transition-transform duration-200"
+            class="w-5 h-5 sm:w-5.5 sm:h-5.5 stroke-[2.5] transition-transform duration-200"
             :class="{ 'rotate-45': isMenuOpen }"
           />
         </button>
       </div>
 
-      <!-- Tab 3: Galeri / Timeline -->
+      <!-- Tab 4: Galeri / Timeline -->
       <button
         type="button"
         class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
@@ -158,15 +175,15 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
         aria-label="Galeri semua foto dan video"
         @click="emit('update:modelValue', 'gallery')"
       >
-        <Images class="w-4 h-4 sm:w-5 sm:h-5 transition-transform" :class="{ 'scale-110': modelValue === 'gallery' }" />
-        <span class="text-[10px] tracking-tight">Galeri</span>
+        <Images class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'gallery' }" />
+        <span class="text-[9.5px] sm:text-[10px] tracking-tight">Galeri</span>
         <span
           v-if="modelValue === 'gallery'"
           class="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE]"
         />
       </button>
 
-      <!-- Tab 4: Favorit -->
+      <!-- Tab 5: Favorit -->
       <button
         type="button"
         class="flex-1 min-h-[44px] flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
@@ -176,7 +193,7 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
       >
         <div class="relative">
           <Heart
-            class="w-4 h-4 sm:w-5 sm:h-5 transition-transform"
+            class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform"
             :class="{ 'scale-110 fill-current': modelValue === 'favorites' }"
           />
           <span
@@ -186,7 +203,7 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
             {{ favoriteCount > 99 ? '99+' : favoriteCount }}
           </span>
         </div>
-        <span class="text-[10px] tracking-tight">Favorit</span>
+        <span class="text-[9.5px] sm:text-[10px] tracking-tight">Favorit</span>
         <span
           v-if="modelValue === 'favorites'"
           class="absolute -bottom-0.5 w-1 h-1 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE]"

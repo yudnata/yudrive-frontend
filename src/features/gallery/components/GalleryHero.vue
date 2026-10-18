@@ -4,6 +4,8 @@ import { useGalleryStore } from '../stores/gallery.store';
 import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { apiFetch } from '@/services/api';
 import { MediaItem, Folder as FolderType } from '@/types';
+import { CalendarHeart } from 'lucide-vue-next';
+import { formatEventDate } from '@/utils/date';
 
 const galleryStore = useGalleryStore();
 const folderStore = useFolderStore();
@@ -12,6 +14,7 @@ interface ShowcaseSlide {
   id: string;
   url: string;
   folderName: string;
+  eventDate?: string | null;
 }
 
 const poolMedia = ref<MediaItem[]>([]);
@@ -24,13 +27,13 @@ const slides = computed<ShowcaseSlide[]>(() => {
   const result: ShowcaseSlide[] = [];
   const seenUrls = new Set<string>();
 
-  // Lookup folders map
-  const folderMap = new Map<string, string>();
+  // Lookup folders map with name and eventDate
+  const folderMap = new Map<string, { name: string; eventDate?: string | null }>();
   for (const f of folderStore.folders) {
-    folderMap.set(f.id, f.name);
+    folderMap.set(f.id, { name: f.name, eventDate: f.eventDate });
   }
   for (const f of allFolders.value) {
-    folderMap.set(f.id, f.name);
+    folderMap.set(f.id, { name: f.name, eventDate: f.eventDate });
   }
 
   // 1. Folders with custom cover URLs
@@ -41,6 +44,7 @@ const slides = computed<ShowcaseSlide[]>(() => {
         id: `folder-${f.id}`,
         url: f.coverUrl,
         folderName: f.name,
+        eventDate: f.eventDate || null,
       });
     }
   }
@@ -50,14 +54,15 @@ const slides = computed<ShowcaseSlide[]>(() => {
   for (const item of combined) {
     if (item.thumbUrl && !seenUrls.has(item.thumbUrl)) {
       seenUrls.add(item.thumbUrl);
-      const folderName = item.folderId && folderMap.has(item.folderId)
-        ? folderMap.get(item.folderId)!
-        : 'Kenangan Kita';
+      const folderInfo = item.folderId ? folderMap.get(item.folderId) : null;
+      const folderName = folderInfo ? folderInfo.name : 'Kenangan Kita';
+      const eventDate = folderInfo?.eventDate || null;
 
       result.push({
         id: item.id,
         url: item.thumbUrl,
         folderName,
+        eventDate,
       });
     }
   }
@@ -78,7 +83,7 @@ onMounted(async () => {
   try {
     const [mediaRes, foldersRes] = await Promise.all([
       apiFetch<{ items: MediaItem[] }>('/media?limit=50').catch(() => ({ items: [] })),
-      apiFetch<{ folders: FolderType[] }>('/folders').catch(() => ({ folders: [] })),
+      apiFetch<{ folders: FolderType[] }>('/folders?all=true').catch(() => ({ folders: [] })),
     ]);
     if (mediaRes?.items) poolMedia.value = mediaRes.items;
     if (foldersRes?.folders) allFolders.value = foldersRes.folders;
@@ -118,13 +123,20 @@ onUnmounted(() => {
         />
 
         <!-- Soft gradient overlay for text readability -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
-        <!-- Clean white text with shadow at bottom left showing folder name -->
-        <div class="absolute bottom-4 left-5 pointer-events-none">
+        <!-- Clean white text with shadow at bottom left showing folder name and optional event date -->
+        <div class="absolute bottom-4 left-5 right-5 pointer-events-none flex items-center gap-2 flex-wrap">
           <p class="text-white text-base sm:text-lg font-semibold tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
             {{ slide.folderName }}
           </p>
+          <span
+            v-if="slide.eventDate"
+            class="text-white/95 text-xs sm:text-sm font-medium px-2.5 py-0.5 rounded-full bg-black/40 backdrop-blur-xs drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)] border border-white/15 flex items-center gap-1.5"
+          >
+            <CalendarHeart class="w-3.5 h-3.5 text-[#FF9BB5]" />
+            {{ formatEventDate(slide.eventDate) }}
+          </span>
         </div>
       </div>
     </template>

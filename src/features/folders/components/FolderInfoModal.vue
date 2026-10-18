@@ -3,7 +3,7 @@ import { ref, watch } from 'vue';
 import { Folder as FolderType, MediaItem } from '@/types';
 import { apiFetch } from '@/services/api';
 import Button from '@/components/ui/Button.vue';
-import { Info, X, Calendar, HardDrive, Files, Image as ImageIcon, Check } from 'lucide-vue-next';
+import { Info, X, Calendar, CalendarHeart, HardDrive, Files, Image as ImageIcon, Check } from 'lucide-vue-next';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -13,21 +13,26 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'coverChanged', coverMediaId: string | null): void;
+  (e: 'dateChanged', eventDate: string | null): void;
 }>();
 
 const isSelectingCover = ref(false);
 const folderPhotos = ref<MediaItem[]>([]);
 const isLoadingPhotos = ref(false);
 const isUpdatingCover = ref(false);
+const editEventDate = ref('');
+const isSavingDate = ref(false);
 
 watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
+  () => [props.isOpen, props.folder],
+  () => {
+    if (props.isOpen && props.folder) {
       isSelectingCover.value = false;
       folderPhotos.value = [];
+      editEventDate.value = props.folder.eventDate || '';
     }
-  }
+  },
+  { immediate: true }
 );
 
 function formatBytes(bytes?: number): string {
@@ -80,6 +85,22 @@ async function handleChooseCover(media: MediaItem) {
 async function handleRemoveCover() {
   if (!props.folder) return;
   emit('coverChanged', null);
+}
+
+async function handleSaveEventDate() {
+  if (!props.folder) return;
+  isSavingDate.value = true;
+  try {
+    emit('dateChanged', editEventDate.value || null);
+  } finally {
+    isSavingDate.value = false;
+  }
+}
+
+async function handleClearEventDate() {
+  if (!props.folder) return;
+  editEventDate.value = '';
+  emit('dateChanged', null);
 }
 </script>
 
@@ -203,6 +224,44 @@ async function handleRemoveCover() {
                   <Check class="w-4 h-4" />
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Event Date / Tanggal Kejadian -->
+          <div class="p-3.5 rounded-2xl bg-surface-tint space-y-2 ring-1 ring-black/5 dark:ring-white/10">
+            <div class="flex items-center justify-between">
+              <label class="flex items-center gap-1.5 text-xs font-semibold text-app">
+                <CalendarHeart class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
+                Tanggal Kejadian / Memori
+              </label>
+              <button
+                v-if="folder.eventDate"
+                type="button"
+                class="text-[11px] text-[#D64545] hover:underline cursor-pointer font-medium"
+                @click="handleClearEventDate"
+              >
+                Hapus Tanggal
+              </button>
+            </div>
+            <p class="text-[11px] text-muted leading-tight">
+              Tautkan folder ini ke tanggal kejadian agar otomatis muncul di menu Kalender.
+            </p>
+            <div class="flex items-center gap-2 pt-0.5">
+              <input
+                v-model="editEventDate"
+                type="date"
+                class="flex-1 px-3 py-2 text-xs rounded-xl bg-surface ring-1 ring-black/5 dark:ring-white/10 text-app focus:outline-none focus:ring-2 focus:ring-[#FF8FAE]"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                :disabled="editEventDate === (folder.eventDate || '')"
+                :loading="isSavingDate"
+                @click="handleSaveEventDate"
+              >
+                Simpan
+              </Button>
             </div>
           </div>
 

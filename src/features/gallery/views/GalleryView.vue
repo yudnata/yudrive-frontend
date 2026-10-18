@@ -18,6 +18,7 @@ import FolderCard from '@/features/folders/components/FolderCard.vue';
 import CreateFolderModal from '@/features/folders/components/CreateFolderModal.vue';
 import FolderInfoModal from '@/features/folders/components/FolderInfoModal.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
+import MemoryCalendar from '../components/MemoryCalendar.vue';
 import UploadFAB from '@/features/upload/components/UploadFAB.vue';
 import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
 import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
@@ -47,10 +48,10 @@ const toast = useToast();
 const sentinelRef = ref<HTMLElement | null>(null);
 const fabRef = ref<InstanceType<typeof UploadFAB> | null>(null);
 
-// Navigation Tab state ('home' | 'folders' | 'gallery' | 'favorites')
+// Navigation Tab state ('home' | 'folders' | 'calendar' | 'gallery' | 'favorites')
 const initialTab = (route.query.tab as NavTab) || (route.query.folder ? 'folders' : 'home');
 const activeTab = ref<NavTab>(
-  ['home', 'folders', 'gallery', 'favorites'].includes(initialTab) ? initialTab : 'home'
+  ['home', 'folders', 'calendar', 'gallery', 'favorites'].includes(initialTab) ? initialTab : 'home'
 );
 
 const favoriteCount = computed(() => favoriteIds.value.size);
@@ -88,6 +89,7 @@ const groupedFavorites = computed(() => {
 const isCreateFolderOpen = ref(false);
 const isRenamingFolder = ref(false);
 const targetFolder = ref<FolderType | null>(null);
+const createFolderInitialDate = ref('');
 const isFolderInfoOpen = ref(false);
 const infoTargetFolder = ref<FolderType | null>(null);
 const isDeleteConfirmOpen = ref(false);
@@ -116,25 +118,38 @@ function handleEmptyUpload() {
 function handleOpenCreateFolder() {
   targetFolder.value = null;
   isRenamingFolder.value = false;
+  createFolderInitialDate.value = '';
+  isCreateFolderOpen.value = true;
+}
+
+function handleCreateFolderForDate(dateStr: string) {
+  targetFolder.value = null;
+  isRenamingFolder.value = false;
+  createFolderInitialDate.value = dateStr;
   isCreateFolderOpen.value = true;
 }
 
 function handleStartRename(folder: FolderType) {
   targetFolder.value = folder;
   isRenamingFolder.value = true;
+  createFolderInitialDate.value = folder.eventDate || '';
   isCreateFolderOpen.value = true;
 }
 
-async function handleSaveFolder(name: string) {
+async function handleSaveFolder(name: string, eventDate: string | null) {
   try {
     if (isRenamingFolder.value && targetFolder.value) {
-      await folderStore.updateFolder(targetFolder.value.id, { name });
+      const updated = await folderStore.updateFolder(targetFolder.value.id, { name, eventDate });
       toast.success('Nama folder berhasil diubah.');
+      if (infoTargetFolder.value?.id === targetFolder.value.id) {
+        infoTargetFolder.value = updated;
+      }
     } else {
-      await folderStore.createFolder(name, folderStore.currentFolder?.id);
+      await folderStore.createFolder(name, folderStore.currentFolder?.id, eventDate);
       toast.success(`Folder "${name}" berhasil dibuat.`);
     }
     isCreateFolderOpen.value = false;
+    createFolderInitialDate.value = '';
   } catch (err: any) {
     toast.error(`Gagal menyimpan folder: ${err.message}`);
   }
@@ -153,6 +168,17 @@ async function handleCoverChanged(coverMediaId: string | null) {
     toast.success('Foto sampul folder berhasil diperbarui.');
   } catch (err: any) {
     toast.error(`Gagal mengubah sampul: ${err.message}`);
+  }
+}
+
+async function handleEventDateChanged(eventDate: string | null) {
+  if (!infoTargetFolder.value) return;
+  try {
+    const updated = await folderStore.updateFolder(infoTargetFolder.value.id, { eventDate });
+    infoTargetFolder.value = updated;
+    toast.success(eventDate ? 'Tanggal kenangan berhasil disimpan.' : 'Tanggal kenangan dihapus.');
+  } catch (err: any) {
+    toast.error(`Gagal mengubah tanggal: ${err.message}`);
   }
 }
 
@@ -276,7 +302,7 @@ watch(activeTab, (newTab) => {
 watch(
   () => route.query.tab,
   (newTab) => {
-    if (newTab && ['home', 'folders', 'gallery', 'favorites'].includes(newTab as string)) {
+    if (newTab && ['home', 'folders', 'calendar', 'gallery', 'favorites'].includes(newTab as string)) {
       activeTab.value = newTab as NavTab;
     }
   }
@@ -465,7 +491,16 @@ onMounted(async () => {
         </section>
       </section>
 
-      <!-- TAB 3: GALERI (CHRONOLOGICAL TIMELINE STREAM) -->
+      <!-- TAB 3: KALENDER KENANGAN -->
+      <section v-else-if="activeTab === 'calendar'" class="space-y-6">
+        <MemoryCalendar
+          @select-folder="handleSelectFolder"
+          @create-folder-for-date="handleCreateFolderForDate"
+          @go-to-folders="activeTab = 'folders'"
+        />
+      </section>
+
+      <!-- TAB 4: GALERI (CHRONOLOGICAL TIMELINE STREAM) -->
       <section v-else-if="activeTab === 'gallery'" class="space-y-4">
         <div class="flex items-center justify-between">
           <div>
@@ -577,6 +612,7 @@ onMounted(async () => {
     <CreateFolderModal
       :is-open="isCreateFolderOpen"
       :initial-name="targetFolder?.name || ''"
+      :initial-event-date="targetFolder?.eventDate || createFolderInitialDate"
       :is-renaming="isRenamingFolder"
       @save="handleSaveFolder"
       @close="isCreateFolderOpen = false"
@@ -586,6 +622,7 @@ onMounted(async () => {
       :is-open="isFolderInfoOpen"
       :folder="infoTargetFolder"
       @cover-changed="handleCoverChanged"
+      @date-changed="handleEventDateChanged"
       @close="isFolderInfoOpen = false"
     />
 

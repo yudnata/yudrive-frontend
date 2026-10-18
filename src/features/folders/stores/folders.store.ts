@@ -23,12 +23,27 @@ export const useFolderStore = defineStore('folders', () => {
     }
   }
 
-  async function createFolder(name: string, parentId?: string | null): Promise<Folder> {
+  async function fetchAllFolders(): Promise<Folder[]> {
+    try {
+      const data = await apiFetch<{ folders: Folder[] }>('/folders?all=true');
+      return data.folders || [];
+    } catch (err) {
+      console.error('Failed to fetch all folders:', err);
+      return [];
+    }
+  }
+
+  async function createFolder(
+    name: string,
+    parentId?: string | null,
+    eventDate?: string | null
+  ): Promise<Folder> {
     const newFolder = await apiFetch<Folder>('/folders', {
       method: 'POST',
       body: JSON.stringify({
         name: name.trim(),
         parentId: parentId || currentFolder.value?.id || null,
+        eventDate: eventDate || null,
       }),
     });
     folders.value.push(newFolder);
@@ -37,7 +52,7 @@ export const useFolderStore = defineStore('folders', () => {
 
   async function updateFolder(
     id: string,
-    updates: { name?: string; coverMediaId?: string | null }
+    updates: { name?: string; coverMediaId?: string | null; eventDate?: string | null }
   ): Promise<Folder> {
     const updated = await apiFetch<Folder>(`/folders/${id}`, {
       method: 'PATCH',
@@ -145,6 +160,7 @@ export const useFolderStore = defineStore('folders', () => {
     breadcrumbs,
     isLoading,
     fetchFolders,
+    fetchAllFolders,
     createFolder,
     updateFolder,
     deleteFolder,

@@ -23,6 +23,7 @@ const galleryStore = useGalleryStore();
 const folderStore = useFolderStore();
 
 const poolMedia = ref<MediaItem[]>([]);
+const extraFolders = ref<FolderType[]>([]);
 const isShuffling = ref(false);
 const seed = ref(1);
 
@@ -30,6 +31,9 @@ const seed = ref(1);
 const folderMap = computed(() => {
   const map = new Map<string, FolderType>();
   for (const f of folderStore.folders) {
+    map.set(f.id, f);
+  }
+  for (const f of extraFolders.value) {
     map.set(f.id, f);
   }
   return map;
@@ -110,10 +114,12 @@ function formatDate(iso?: string): string {
 
 onMounted(async () => {
   try {
-    const res = await apiFetch<{ items: MediaItem[] }>('/media?limit=50');
-    if (res.items) {
-      poolMedia.value = res.items;
-    }
+    const [mediaRes, foldersRes] = await Promise.all([
+      apiFetch<{ items: MediaItem[] }>('/media?limit=50').catch(() => ({ items: [] })),
+      apiFetch<{ folders: FolderType[] }>('/folders?all=true').catch(() => ({ folders: [] })),
+    ]);
+    if (mediaRes?.items) poolMedia.value = mediaRes.items;
+    if (foldersRes?.folders) extraFolders.value = foldersRes.folders;
   } catch {
     // fallback
   }
