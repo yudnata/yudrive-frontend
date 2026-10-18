@@ -17,7 +17,6 @@ import UploadFAB from '@/features/upload/components/UploadFAB.vue';
 import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
 import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
 import FloatingHearts from '@/components/ui/FloatingHearts.vue';
-import Skeleton from '@/components/ui/Skeleton.vue';
 import Button from '@/components/ui/Button.vue';
 import { MediaItem, Folder as FolderType } from '@/types';
 import { Coffee, Folder as FolderIcon, FolderPlus, ArrowLeft, ChevronRight, Home } from 'lucide-vue-next';
@@ -253,17 +252,13 @@ onMounted(async () => {
           </h2>
         </div>
 
-        <!-- Loading Skeleton (Neutral Shimmer, No Border) -->
-        <div v-if="galleryStore.isLoading" class="space-y-6">
-          <Skeleton width="180px" height="24px" rounded="sm" />
-          <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
-            <Skeleton
-              v-for="n in 12"
-              :key="n"
-              aspect="square"
-              rounded="md"
-            />
-          </div>
+        <!-- Minimal Subtle Loading Indicator (No bulky skeleton) -->
+        <div
+          v-if="galleryStore.isLoading && galleryStore.items.length === 0"
+          class="py-8 flex items-center justify-center gap-2 text-xs text-muted"
+        >
+          <div class="w-2 h-2 rounded-full bg-[#C93D68] animate-ping" />
+          <span>Memuat kenangan...</span>
         </div>
 
         <!-- Empty State (No media and no folders) -->

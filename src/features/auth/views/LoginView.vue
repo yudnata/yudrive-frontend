@@ -63,7 +63,7 @@ async function onSubmit() {
           <Heart class="w-10 h-10 mx-auto mb-3 text-[#C93D68] dark:text-[#FF8FAE] fill-current drop-shadow-sm" />
 
           <h1 class="text-2xl sm:text-3xl font-serif font-semibold text-[#C93D68] dark:text-[#FF8FAE] mb-2 tracking-tight">
-            Our Memories
+            Yudhi & Wina
           </h1>
 
           <p class="text-xs sm:text-sm text-muted">

@@ -31,7 +31,7 @@ function formatBytes(bytes?: number): string {
       <div class="flex items-center gap-2">
         <Heart class="w-6 h-6 fill-current text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
         <span class="text-xl font-semibold font-serif tracking-tight text-[#C93D68] dark:text-[#FF8FAE]">
-          Our Memories
+          Yudhi & Wina
         </span>
       </div>
 
