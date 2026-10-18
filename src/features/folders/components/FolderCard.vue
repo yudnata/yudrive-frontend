@@ -127,7 +127,7 @@ function onAction(action: 'info' | 'rename' | 'delete') {
 
       <!-- 2. FOLDER BODY (Tabbed silhouette with cover photo or cute folder pocket interior) -->
       <div
-        class="relative w-full aspect-16/10 rounded-2xl rounded-tl-none overflow-hidden bg-gradient-to-b from-[#FFD6E3] via-[#FFEBF1] to-[#FFE0EA] dark:from-[#3D202F] dark:via-[#2F1724] dark:to-[#25121C] border border-[#FFCCD9]/80 dark:border-white/10 shadow-xs"
+        class="relative w-full aspect-4/3 rounded-2xl rounded-tl-none overflow-hidden bg-gradient-to-b from-[#FFD6E3] via-[#FFEBF1] to-[#FFE0EA] dark:from-[#3D202F] dark:via-[#2F1724] dark:to-[#25121C] border border-[#FFCCD9]/80 dark:border-white/10 shadow-xs"
       >
         <!-- A. When Folder has Cover Photo -->
         <template v-if="folder.coverUrl">
@@ -137,50 +137,48 @@ function onAction(action: 'info' | 'rename' | 'delete') {
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             loading="lazy"
           />
-          <!-- Soft gradient vignette -->
-          <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
         </template>
 
         <!-- B. When Folder is Empty / No Cover: Cute Skeuomorphic Stationery Folder Interior -->
         <template v-else>
           <!-- Peeking document / photo paper sheet inside the folder -->
-          <div class="absolute top-2 inset-x-3.5 h-14 rounded-t-xl bg-white/90 dark:bg-white/10 shadow-xs border border-white/60 dark:border-white/5 flex flex-col justify-center px-3 gap-1.5 transition-transform duration-300 group-hover:-translate-y-1">
+          <div class="absolute top-2 inset-x-3.5 h-16 rounded-t-xl bg-white/90 dark:bg-white/10 shadow-xs border border-white/60 dark:border-white/5 flex flex-col justify-center px-3 gap-1.5 transition-transform duration-300 group-hover:-translate-y-1">
             <div class="w-16 h-1.5 rounded-full bg-[#FFCCD9]/70 dark:bg-white/20" />
             <div class="w-10 h-1.5 rounded-full bg-[#FFCCD9]/50 dark:bg-white/10" />
-            <Heart class="w-3 h-3 text-[#FF8FAE]/50 fill-current absolute right-3 top-3" />
+            <Heart class="w-3.5 h-3.5 text-[#FF8FAE]/50 fill-current absolute right-3 top-3" />
           </div>
 
           <!-- Front Pocket Flap (Curved front flap holding the paper) -->
-          <div class="absolute bottom-0 inset-x-0 h-14 bg-gradient-to-t from-[#FFC2D3] to-[#FFD6E3] dark:from-[#361A28] dark:to-[#452234] border-t border-white/50 dark:border-white/10 shadow-sm flex items-center justify-center">
-            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/30 dark:bg-black/20 backdrop-blur-xs text-[#C93D68] dark:text-[#FF8FAE] shadow-2xs">
-              <FolderIcon class="w-4 h-4 fill-current opacity-90" />
+          <div class="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[#FFB8CC] to-[#FFD6E3] dark:from-[#361A28] dark:to-[#452234] border-t border-white/40 dark:border-white/10 shadow-sm flex items-center justify-center pb-8">
+            <div class="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/30 dark:bg-black/20 backdrop-blur-xs text-[#C93D68] dark:text-[#FF8FAE] shadow-2xs">
+              <FolderIcon class="w-3.5 h-3.5 fill-current opacity-90" />
               <span class="text-[10px] font-bold tracking-tight">Kenangan</span>
             </div>
           </div>
         </template>
-      </div>
 
-      <!-- 3. BOTTOM WHITESPACE SECTION (Clean whitespace area for folder title & metadata) -->
-      <div
-        class="mt-2 p-3 sm:p-3.5 rounded-2xl bg-surface border border-black/5 dark:border-white/10 shadow-soft-sm transition-colors"
-      >
-        <h3 class="text-sm font-bold text-app truncate tracking-tight">
-          {{ folder.name }}
-        </h3>
+        <!-- C. BOTTOM OVERLAY: White text with deep shadow & gradient scrim for 100% readability even on pure white covers -->
+        <div class="absolute inset-x-0 bottom-0 pt-10 pb-2.5 px-3 bg-gradient-to-t from-black/90 via-black/55 to-transparent flex flex-col justify-end pointer-events-none">
+          <h3 class="text-xs sm:text-sm font-bold text-white truncate tracking-tight drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]">
+            {{ folder.name }}
+          </h3>
 
-        <div class="flex items-center gap-1.5 text-[11px] text-muted mt-0.5 truncate">
-          <span>{{ folder.itemCount }} item</span>
-          <span class="text-muted/40">•</span>
-          <span>{{ formatBytes(folder.totalBytes) }}</span>
-        </div>
+          <div class="flex items-center justify-between gap-1 text-[10px] sm:text-[11px] text-white/90 font-medium mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+            <div class="flex items-center gap-1.5 truncate">
+              <span>{{ folder.itemCount }} item</span>
+              <span class="opacity-50">•</span>
+              <span>{{ formatBytes(folder.totalBytes) }}</span>
+            </div>
 
-        <!-- Optional Event Date Badge -->
-        <div
-          v-if="folder.eventDate"
-          class="mt-2 pt-2 border-t border-black/5 dark:border-white/10 flex items-center gap-1 text-[10px] font-medium text-[#C93D68] dark:text-[#FF8FAE]"
-        >
-          <CalendarHeart class="w-3 h-3 shrink-0" />
-          <span class="truncate">{{ formatEventDate(folder.eventDate) }}</span>
+            <!-- Optional Event Date Badge -->
+            <div
+              v-if="folder.eventDate"
+              class="flex items-center gap-1 text-[9px] sm:text-[10px] text-[#FFB3C7] shrink-0 font-semibold"
+            >
+              <CalendarHeart class="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+              <span class="truncate">{{ formatEventDate(folder.eventDate) }}</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
