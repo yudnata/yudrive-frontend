@@ -6,6 +6,15 @@ import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useToast } from '@/composables/useToast';
 import { Plus, UploadCloud, FileUp, FolderUp, FolderPlus } from 'lucide-vue-next';
 
+withDefaults(
+  defineProps<{
+    hideMainFab?: boolean;
+  }>(),
+  {
+    hideMainFab: false,
+  }
+);
+
 const emit = defineEmits<{
   (e: 'createFolder'): void;
 }>();
@@ -159,8 +168,28 @@ onUnmounted(() => {
       </p>
     </div>
 
-    <!-- Floating Action Speed Dial -->
+    <!-- Compact Upload Queue Toggle Pill (when hideMainFab is true) -->
     <div
+      v-if="hideMainFab && uploadStore.hasTasks"
+      class="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-30"
+    >
+      <button
+        type="button"
+        class="glass-nav bg-surface/95 text-app px-4 py-2 rounded-full shadow-lg text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-11 transition-all cursor-pointer ring-1 ring-black/5 dark:ring-white/10"
+        @click="uploadStore.isPanelOpen = !uploadStore.isPanelOpen"
+      >
+        <span
+          v-if="uploadStore.activeCount > 0"
+          class="w-2 h-2 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE] animate-ping"
+        />
+        <span v-else class="w-2 h-2 rounded-full bg-[#3F9D7A]" />
+        <span>{{ uploadStore.activeCount > 0 ? `${uploadStore.activeCount} Mengunggah` : 'Antrean Upload' }}</span>
+      </button>
+    </div>
+
+    <!-- Floating Action Speed Dial (when hideMainFab is false) -->
+    <div
+      v-else-if="!hideMainFab"
       ref="fabContainerRef"
       class="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom,1.5rem))] right-4 sm:right-6 z-40 flex flex-col items-end gap-3"
     >

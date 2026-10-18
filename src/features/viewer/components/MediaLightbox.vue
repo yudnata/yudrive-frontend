@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useSwipe } from '@vueuse/core';
 import { useViewerStore } from '../stores/viewer.store';
 import { useGalleryStore } from '@/features/gallery/stores/gallery.store';
+import { useFavorites } from '@/features/gallery/composables/useFavorites';
 import CustomVideoPlayer from './CustomVideoPlayer.vue';
 import DeleteConfirmModal from './DeleteConfirmModal.vue';
 import {
@@ -18,12 +19,21 @@ import {
 
 const viewerStore = useViewerStore();
 const galleryStore = useGalleryStore();
+const { isFavorite, toggleFavorite } = useFavorites();
 
 const stageRef = ref<HTMLElement | null>(null);
-const isFavorited = ref(false);
+const isFavorited = computed(() => {
+  return viewerStore.currentMediaId ? isFavorite(viewerStore.currentMediaId) : false;
+});
 const isDeleting = ref(false);
 const showDeleteConfirm = ref(false);
 const imageError = ref(false);
+
+function handleToggleFavorite() {
+  if (viewerStore.currentMediaId) {
+    toggleFavorite(viewerStore.currentMediaId);
+  }
+}
 
 // Touch swipe navigation for mobile
 const { direction } = useSwipe(stageRef, {
@@ -114,11 +124,10 @@ function handleImageError() {
   }).catch(() => {});
 }
 
-// Reset favorite and image error on media change
+// Reset image error on media change
 watch(
   () => viewerStore.currentMediaId,
   () => {
-    isFavorited.value = false;
     imageError.value = false;
   }
 );
@@ -180,10 +189,10 @@ onUnmounted(() => {
             <!-- Favorite Pop Button -->
             <button
               type="button"
-              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-transform active:scale-125 min-h-11 min-w-11 flex items-center justify-center"
+              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-transform active:scale-125 min-h-11 min-w-11 flex items-center justify-center cursor-pointer"
               :class="{ 'text-[#FF8FAE]': isFavorited }"
               aria-label="Tandai favorit"
-              @click="isFavorited = !isFavorited"
+              @click="handleToggleFavorite"
             >
               <Heart
                 class="w-5 h-5 transition-transform"

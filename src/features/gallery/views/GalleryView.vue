@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useGalleryStore } from '../stores/gallery.store';
 import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useViewerStore } from '@/features/viewer/stores/viewer.store';
+import { useFavorites } from '@/features/gallery/composables/useFavorites';
 import { useToast } from '@/composables/useToast';
 import GalleryHeader from '../components/GalleryHeader.vue';
 import GalleryHero from '../components/GalleryHero.vue';
+import HomeBento from '../components/HomeBento.vue';
+import FloatingBottomNav, { NavTab } from '@/components/navigation/FloatingBottomNav.vue';
 import GalleryDateGroup from '../components/GalleryDateGroup.vue';
 import GalleryEmptyState from '../components/GalleryEmptyState.vue';
 import FolderCard from '@/features/folders/components/FolderCard.vue';
@@ -20,7 +23,16 @@ import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
 import FloatingHearts from '@/components/ui/FloatingHearts.vue';
 import Button from '@/components/ui/Button.vue';
 import { MediaItem, Folder as FolderType } from '@/types';
-import { Coffee, Folder as FolderIcon, FolderPlus, ArrowLeft, ChevronRight, Home } from 'lucide-vue-next';
+import {
+  Coffee,
+  Folder as FolderIcon,
+  FolderPlus,
+  ArrowLeft,
+  ChevronRight,
+  Home,
+  Images,
+  Heart,
+} from 'lucide-vue-next';
 
 const router = useRouter();
 const route = useRoute();
@@ -28,10 +40,48 @@ const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
 const folderStore = useFolderStore();
 const viewerStore = useViewerStore();
+const { isFavorite, favoriteIds } = useFavorites();
 const toast = useToast();
 
 const sentinelRef = ref<HTMLElement | null>(null);
 const fabRef = ref<InstanceType<typeof UploadFAB> | null>(null);
+
+// Navigation Tab state ('home' | 'folders' | 'gallery' | 'favorites')
+const initialTab = (route.query.tab as NavTab) || (route.query.folder ? 'folders' : 'home');
+const activeTab = ref<NavTab>(
+  ['home', 'folders', 'gallery', 'favorites'].includes(initialTab) ? initialTab : 'home'
+);
+
+const favoriteCount = computed(() => favoriteIds.value.size);
+
+const favoriteItems = computed<MediaItem[]>(() => {
+  return galleryStore.items.filter((item) => isFavorite(item.id));
+});
+
+const groupedFavorites = computed(() => {
+  const groups: Record<string, MediaItem[]> = {};
+  for (const item of favoriteItems.value) {
+    const date = item.takenAt ? new Date(item.takenAt) : new Date(item.createdAt);
+    const key = date.toISOString().split('T')[0];
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(item);
+  }
+
+  return Object.entries(groups).map(([dateKey, items]) => {
+    const d = new Date(dateKey);
+    const label = new Intl.DateTimeFormat('id-ID', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(d);
+
+    return {
+      dateKey,
+      dateLabel: label,
+      items,
+    };
+  });
+});
 
 // Modal states
 const isCreateFolderOpen = ref(false);
@@ -121,12 +171,17 @@ async function handleDeleteFolder(folder: FolderType) {
 }
 
 function handleSelectFolder(folder: FolderType) {
+  activeTab.value = 'folders';
   folderStore.openFolder(folder);
   galleryStore.fetchMedia(true, folder.id);
   router.push({
     path: '/',
-    query: { ...route.query, folder: folder.id },
+    query: { ...route.query, tab: 'folders', folder: folder.id },
   });
+}
+
+function handleBentoSelectFolder(folder: FolderType) {
+  handleSelectFolder(folder);
 }
 
 function handleNavigateBreadcrumb(index: number) {
@@ -140,7 +195,7 @@ function handleNavigateBreadcrumb(index: number) {
     galleryStore.fetchMedia(true, target.id);
     router.push({
       path: '/',
-      query: { ...route.query, folder: target.id },
+      query: { ...route.query, tab: 'folders', folder: target.id },
     });
   } else {
     handleNavigateRoot();
@@ -167,12 +222,12 @@ async function syncFolderFromRoute(folderId?: string) {
     return;
   }
 
-  // Already on this folder
+  activeTab.value = 'folders';
+
   if (folderStore.currentFolder?.id === folderId) {
     return;
   }
 
-  // Target folder is in breadcrumbs
   const breadcrumbIndex = folderStore.breadcrumbs.findIndex((b) => b.id === folderId);
   if (breadcrumbIndex !== -1) {
     folderStore.navigateToBreadcrumb(breadcrumbIndex);
@@ -180,7 +235,6 @@ async function syncFolderFromRoute(folderId?: string) {
     return;
   }
 
-  // Target folder is in current visible folders list
   const existingFolder = folderStore.folders.find((f) => f.id === folderId);
   if (existingFolder) {
     folderStore.openFolder(existingFolder);
@@ -188,7 +242,6 @@ async function syncFolderFromRoute(folderId?: string) {
     return;
   }
 
-  // Otherwise, load full hierarchy from API (deep link / browser history jump)
   try {
     await folderStore.loadFolderHierarchy(folderId);
     await galleryStore.fetchMedia(true, folderId);
@@ -197,6 +250,24 @@ async function syncFolderFromRoute(folderId?: string) {
     handleNavigateRoot();
   }
 }
+
+watch(activeTab, (newTab) => {
+  if (route.query.tab !== newTab) {
+    router.replace({
+      path: '/',
+      query: { ...route.query, tab: newTab },
+    });
+  }
+});
+
+watch(
+  () => route.query.tab,
+  (newTab) => {
+    if (newTab && ['home', 'folders', 'gallery', 'favorites'].includes(newTab as string)) {
+      activeTab.value = newTab as NavTab;
+    }
+  }
+);
 
 watch(
   () => route.query.folder,
@@ -249,101 +320,152 @@ onMounted(async () => {
       </div>
     </div>
 
-    <!-- Main Explorer / Gallery Container -->
-    <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6 pb-28">
-      <!-- HERO SECTION AT TOP -->
-      <GalleryHero v-if="!folderStore.currentFolder" />
-
-      <!-- Breadcrumb Navigation Bar (Windows Explorer Style, Shadow-based) -->
-      <nav
-        class="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-2xl bg-surface shadow-soft-sm"
-        aria-label="Navigasi folder"
-      >
-        <div class="flex-1 min-w-0 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
-          <!-- Back button if inside folder -->
-          <button
-            v-if="folderStore.currentFolder"
-            type="button"
-            class="w-8 h-8 rounded-lg hover:bg-surface-tint text-muted hover:text-app flex items-center justify-center transition-colors shrink-0 cursor-pointer"
-            aria-label="Kembali ke folder sebelumnya"
-            @click="handleNavigateBreadcrumb(folderStore.breadcrumbs.length - 2)"
-          >
-            <ArrowLeft class="w-4 h-4" />
-          </button>
-
-          <!-- Root Galeri -->
-          <button
-            type="button"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors font-medium shrink-0 cursor-pointer h-8"
-            :class="!folderStore.currentFolder ? 'bg-surface-tint text-[#C93D68] dark:text-[#FF8FAE] font-semibold' : 'text-muted hover:text-app'"
-            @click="handleNavigateRoot"
-            title="Semua Kenangan"
-          >
-            <Home class="w-3.5 h-3.5 shrink-0" />
-            <span :class="folderStore.currentFolder ? 'hidden sm:inline' : 'inline'">Semua Kenangan</span>
-          </button>
-
-          <!-- Breadcrumb Segments -->
-          <template v-for="(b, idx) in folderStore.breadcrumbs" :key="b.id">
-            <ChevronRight class="w-3.5 h-3.5 text-muted shrink-0" />
-            <button
-              type="button"
-              class="px-2.5 py-1.5 rounded-lg transition-colors font-medium truncate max-w-36 sm:max-w-56 shrink-0 cursor-pointer h-8"
-              :class="idx === folderStore.breadcrumbs.length - 1 ? 'bg-surface-tint text-[#C93D68] dark:text-[#FF8FAE] font-semibold' : 'text-muted hover:text-app'"
-              @click="handleNavigateBreadcrumb(idx)"
-              :title="b.name"
-            >
-              {{ b.name }}
-            </button>
-          </template>
-        </div>
-
-        <!-- Create Folder Quick Action -->
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          class="shrink-0 text-xs flex items-center justify-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-xl cursor-pointer"
-          aria-label="Buat folder baru"
-          @click="handleOpenCreateFolder"
-        >
-          <FolderPlus class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
-          <span class="hidden sm:inline">Folder Baru</span>
-        </Button>
-      </nav>
-
-      <!-- FOLDERS SECTION (Placed directly below Hero / Explorer nav) -->
-      <section v-if="folderStore.folders.length > 0" class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-            <FolderIcon class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
-            <span>{{ folderStore.currentFolder ? 'Sub-Folder' : 'Folder Kenangan' }}</span>
-            <span class="text-xs font-normal">({{ folderStore.folders.length }})</span>
-          </h2>
-        </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
-          <FolderCard
-            v-for="folder in folderStore.folders"
-            :key="folder.id"
-            :folder="folder"
-            @select="handleSelectFolder"
-            @info="handleOpenFolderInfo"
-            @rename="handleStartRename"
-            @delete="handleDeleteFolder"
-          />
-        </div>
+    <!-- Main Explorer / Gallery Container with generous bottom padding for floating dock -->
+    <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 pb-32 sm:pb-36">
+      
+      <!-- TAB 1: BERANDA (BENTO GRID OF RANDOMIZED MEMORIES) -->
+      <section v-if="activeTab === 'home'">
+        <HomeBento
+          @select-media="handleSelectMedia"
+          @select-folder="handleBentoSelectFolder"
+          @explore-folders="activeTab = 'folders'"
+        />
       </section>
 
-      <!-- MEDIA FILES SECTION -->
-      <section class="space-y-3">
-        <div v-if="folderStore.folders.length > 0 && galleryStore.items.length > 0" class="flex items-center justify-between pt-2">
-          <h2 class="text-sm font-semibold uppercase tracking-wider text-muted">
-            {{ folderStore.currentFolder ? `File di "${folderStore.currentFolder.name}"` : 'Foto & Video' }}
-          </h2>
+      <!-- TAB 2: FOLDERS (WINDOWS EXPLORER STYLE BREADCRUMBS & FOLDERS) -->
+      <section v-else-if="activeTab === 'folders'" class="space-y-6">
+        <!-- HERO SECTION AT TOP OF FOLDERS -->
+        <GalleryHero v-if="!folderStore.currentFolder" />
+
+        <!-- Breadcrumb Navigation Bar (Windows Explorer Style, Shadow-based) -->
+        <nav
+          class="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-2xl bg-surface shadow-soft-sm"
+          aria-label="Navigasi folder"
+        >
+          <div class="flex-1 min-w-0 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
+            <!-- Back button if inside folder -->
+            <button
+              v-if="folderStore.currentFolder"
+              type="button"
+              class="w-8 h-8 rounded-lg hover:bg-surface-tint text-muted hover:text-app flex items-center justify-center transition-colors shrink-0 cursor-pointer"
+              aria-label="Kembali ke folder sebelumnya"
+              @click="handleNavigateBreadcrumb(folderStore.breadcrumbs.length - 2)"
+            >
+              <ArrowLeft class="w-4 h-4" />
+            </button>
+
+            <!-- Root Galeri -->
+            <button
+              type="button"
+              class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors font-medium shrink-0 cursor-pointer h-8"
+              :class="!folderStore.currentFolder ? 'bg-surface-tint text-[#C93D68] dark:text-[#FF8FAE] font-semibold' : 'text-muted hover:text-app'"
+              @click="handleNavigateRoot"
+              title="Semua Kenangan"
+            >
+              <Home class="w-3.5 h-3.5 shrink-0" />
+              <span :class="folderStore.currentFolder ? 'hidden sm:inline' : 'inline'">Semua Kenangan</span>
+            </button>
+
+            <!-- Breadcrumb Segments -->
+            <template v-for="(b, idx) in folderStore.breadcrumbs" :key="b.id">
+              <ChevronRight class="w-3.5 h-3.5 text-muted shrink-0" />
+              <button
+                type="button"
+                class="px-2.5 py-1.5 rounded-lg transition-colors font-medium truncate max-w-36 sm:max-w-56 shrink-0 cursor-pointer h-8"
+                :class="idx === folderStore.breadcrumbs.length - 1 ? 'bg-surface-tint text-[#C93D68] dark:text-[#FF8FAE] font-semibold' : 'text-muted hover:text-app'"
+                @click="handleNavigateBreadcrumb(idx)"
+                :title="b.name"
+              >
+                {{ b.name }}
+              </button>
+            </template>
+          </div>
+
+          <!-- Create Folder Quick Action -->
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            class="shrink-0 text-xs flex items-center justify-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-xl cursor-pointer"
+            aria-label="Buat folder baru"
+            @click="handleOpenCreateFolder"
+          >
+            <FolderPlus class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
+            <span class="hidden sm:inline">Folder Baru</span>
+          </Button>
+        </nav>
+
+        <!-- FOLDERS GRID SECTION -->
+        <section v-if="folderStore.folders.length > 0" class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+              <FolderIcon class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
+              <span>{{ folderStore.currentFolder ? 'Sub-Folder' : 'Folder Kenangan' }}</span>
+              <span class="text-xs font-normal">({{ folderStore.folders.length }})</span>
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
+            <FolderCard
+              v-for="folder in folderStore.folders"
+              :key="folder.id"
+              :folder="folder"
+              @select="handleSelectFolder"
+              @info="handleOpenFolderInfo"
+              @rename="handleStartRename"
+              @delete="handleDeleteFolder"
+            />
+          </div>
+        </section>
+
+        <!-- MEDIA IN CURRENT FOLDER -->
+        <section v-if="folderStore.currentFolder" class="space-y-3">
+          <div v-if="galleryStore.items.length > 0" class="flex items-center justify-between pt-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-muted">
+              File di "{{ folderStore.currentFolder.name }}"
+            </h2>
+          </div>
+
+          <!-- Empty folder state -->
+          <div
+            v-if="galleryStore.items.length === 0"
+            class="text-center py-12 px-4 rounded-3xl bg-surface shadow-soft-sm space-y-3"
+          >
+            <FolderIcon class="w-12 h-12 mx-auto text-[#C93D68]/80 dark:text-[#FF8FAE]/80 stroke-[1.5]" />
+            <h3 class="text-base font-semibold text-app">
+              Folder "{{ folderStore.currentFolder.name }}" masih kosong
+            </h3>
+            <p class="text-xs text-muted max-w-sm mx-auto">
+              Ketuk tombol tambah (+) di bawah untuk mengunggah foto atau video langsung ke folder ini.
+            </p>
+          </div>
+
+          <div v-else class="space-y-2">
+            <GalleryDateGroup
+              v-for="group in galleryStore.groupedByDate"
+              :key="group.dateKey"
+              :date-label="group.dateLabel"
+              :items="group.items"
+              @select="handleSelectMedia"
+            />
+          </div>
+        </section>
+      </section>
+
+      <!-- TAB 3: GALERI (CHRONOLOGICAL TIMELINE STREAM) -->
+      <section v-else-if="activeTab === 'gallery'" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
+              <Images class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
+              <span>Semua Kenangan Foto & Video</span>
+            </h2>
+            <p class="text-xs text-muted mt-0.5">
+              Urutan linimasa momen berharga dari waktu ke waktu
+            </p>
+          </div>
         </div>
 
-        <!-- Minimal Subtle Loading Indicator (No bulky skeleton) -->
         <div
           v-if="galleryStore.isLoading && galleryStore.items.length === 0"
           class="py-8 flex items-center justify-center gap-2 text-xs text-muted"
@@ -352,28 +474,11 @@ onMounted(async () => {
           <span>Memuat kenangan...</span>
         </div>
 
-        <!-- Empty State (No media and no folders) -->
         <GalleryEmptyState
-          v-else-if="galleryStore.items.length === 0 && folderStore.folders.length === 0"
+          v-else-if="galleryStore.items.length === 0"
           @upload="handleEmptyUpload"
         />
 
-        <!-- Empty Folder State (Has no media in current folder) -->
-        <div
-          v-else-if="galleryStore.items.length === 0 && folderStore.currentFolder"
-          class="text-center py-12 px-4 rounded-3xl bg-surface shadow-soft-sm space-y-3"
-        >
-          <!-- Bare Icon (No background container) -->
-          <FolderIcon class="w-12 h-12 mx-auto text-[#C93D68]/80 dark:text-[#FF8FAE]/80 stroke-[1.5]" />
-          <h3 class="text-base font-serif font-semibold text-app">
-            Folder "{{ folderStore.currentFolder.name }}" masih kosong
-          </h3>
-          <p class="text-xs text-muted max-w-sm mx-auto">
-            Gunakan tombol tambah (+) di pojok kanan bawah untuk mengunggah foto atau video langsung ke folder ini.
-          </p>
-        </div>
-
-        <!-- Populated Gallery Grouped by Date -->
         <div v-else class="space-y-2">
           <GalleryDateGroup
             v-for="group in galleryStore.groupedByDate"
@@ -395,11 +500,59 @@ onMounted(async () => {
           </div>
         </div>
       </section>
+
+      <!-- TAB 4: FAVORIT (STARRED / LIKED MOMENTS) -->
+      <section v-else-if="activeTab === 'favorites'" class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
+              <Heart class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] fill-current" />
+              <span>Momen Terfavorit</span>
+            </h2>
+            <p class="text-xs text-muted mt-0.5">
+              Koleksi foto dan video paling berkesan yang kamu simpan
+            </p>
+          </div>
+        </div>
+
+        <div
+          v-if="favoriteItems.length === 0"
+          class="text-center py-16 px-4 rounded-3xl bg-surface shadow-soft-sm space-y-3"
+        >
+          <Heart class="w-12 h-12 mx-auto text-[#FF8FAE] fill-current/30 stroke-[1.5]" />
+          <h3 class="text-base font-semibold text-app">
+            Belum ada kenangan favorit
+          </h3>
+          <p class="text-xs text-muted max-w-sm mx-auto">
+            Buka foto atau video apa pun, lalu ketuk tombol hati (❤️) di pojok atas untuk menyimpannya ke koleksi favorit ini.
+          </p>
+        </div>
+
+        <div v-else class="space-y-2">
+          <GalleryDateGroup
+            v-for="group in groupedFavorites"
+            :key="group.dateKey"
+            :date-label="group.dateLabel"
+            :items="group.items"
+            @select="handleSelectMedia"
+          />
+        </div>
+      </section>
     </main>
 
-    <!-- Upload Controls -->
+    <!-- FLOATING BOTTOM NAVIGATION DOCK (Sticky, Centered, No Overlap) -->
+    <FloatingBottomNav
+      v-model="activeTab"
+      :favorite-count="favoriteCount"
+      @upload-files="fabRef?.triggerFileInput()"
+      @upload-folder="fabRef?.triggerFolderInput()"
+      @create-folder="handleOpenCreateFolder"
+    />
+
+    <!-- Upload Hidden Inputs & Drag Overlay (Main FAB hidden since integrated in bottom dock) -->
     <UploadFAB
       ref="fabRef"
+      :hide-main-fab="true"
       @create-folder="handleOpenCreateFolder"
     />
     <UploadQueuePanel />
