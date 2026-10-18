@@ -6,6 +6,8 @@ import { useGalleryStore } from '../stores/gallery.store';
 import GalleryHeader from '../components/GalleryHeader.vue';
 import GalleryDateGroup from '../components/GalleryDateGroup.vue';
 import GalleryEmptyState from '../components/GalleryEmptyState.vue';
+import UploadFAB from '@/features/upload/components/UploadFAB.vue';
+import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import { MediaItem } from '@/types';
 import { Heart, Coffee } from 'lucide-vue-next';
@@ -14,6 +16,7 @@ const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
 
 const sentinelRef = ref<HTMLElement | null>(null);
+const fabRef = ref<InstanceType<typeof UploadFAB> | null>(null);
 
 // Trigger infinite scroll when scrolling near bottom
 useIntersectionObserver(
@@ -27,8 +30,12 @@ useIntersectionObserver(
 );
 
 function handleSelectMedia(item: MediaItem) {
-  // Will be connected to Lightbox/Viewer in Fase 4
+  // Connected to Lightbox/Viewer in Fase 4
   console.log('Selected media:', item.id);
+}
+
+function handleEmptyUpload() {
+  fabRef.value?.triggerFileInput?.();
 }
 
 onMounted(async () => {
@@ -75,6 +82,7 @@ onMounted(async () => {
       <!-- Empty State -->
       <GalleryEmptyState
         v-else-if="galleryStore.items.length === 0"
+        @upload="handleEmptyUpload"
       />
 
       <!-- Populated Gallery Grouped by Date -->
@@ -99,6 +107,10 @@ onMounted(async () => {
         </div>
       </div>
     </main>
+
+    <!-- Upload Controls -->
+    <UploadFAB ref="fabRef" />
+    <UploadQueuePanel />
 
     <!-- Footer -->
     <footer class="py-6 text-center text-xs text-muted border-t border-app mt-auto">
