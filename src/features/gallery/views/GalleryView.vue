@@ -442,12 +442,19 @@ async function confirmDeleteFolder() {
   isDeletingFolder.value = true;
   try {
     const isCurrent = folderStore.currentFolder?.id === folder.id;
-    await folderStore.deleteFolder(folder.id);
-    toast.success(`Folder "${folder.name}" berhasil dihapus.`);
+    const deletedFolderId = folder.id;
+    await folderStore.deleteFolder(deletedFolderId);
+
+    // Also remove items from local galleryStore in memory that belonged to this folder
+    galleryStore.items = galleryStore.items.filter((item) => item.folderId !== deletedFolderId);
+    authStore.fetchMe().catch(() => {});
+
+    toast.success(`Folder "${folder.name}" beserta foto di dalamnya berhasil dihapus.`);
     isDeleteConfirmOpen.value = false;
     folderToDelete.value = null;
     if (isCurrent) {
       handleNavigateRoot();
+      await galleryStore.fetchMedia(true, null);
     } else {
       await galleryStore.fetchMedia(true, folderStore.currentFolder?.id);
     }
@@ -647,7 +654,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="relative min-h-screen flex flex-col bg-app text-app pb-safe overflow-x-hidden">
+  <div class="relative min-h-screen flex flex-col bg-app text-app pb-safe overflow-x-clip">
     <!-- GPU-Accelerated Lag-Free Background Love Particles -->
     <FloatingHearts />
 
@@ -1277,7 +1284,7 @@ onMounted(async () => {
     <ConfirmDialog
       :is-open="isDeleteConfirmOpen"
       :title="`Hapus Folder &quot;${folderToDelete?.name}&quot;?`"
-      message="File di dalamnya akan dipindahkan ke galeri utama."
+      message="Semua foto dan video di dalam folder ini juga akan dihapus secara permanen dari penyimpanan kita."
       confirm-text="Ya, Hapus Folder"
       cancel-text="Batal"
       variant="danger"

@@ -56,7 +56,7 @@
     color: var(--text);
     font-family: 'Quicksand', system-ui, -apple-system, sans-serif;
     min-height: 100dvh;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   h1, h2, h3, h4, h5, h6, .font-serif {

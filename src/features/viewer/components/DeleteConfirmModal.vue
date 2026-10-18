@@ -41,13 +41,15 @@ onUnmounted(() => {
     >
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-black/60 backdrop-blur-sm overscroll-contain"
         role="dialog"
         aria-modal="true"
         aria-labelledby="delete-modal-title"
+        @click="$emit('cancel')"
       >
         <div
-          class="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-surface shadow-2xl text-center transform transition-all"
+          class="w-full max-w-sm my-auto p-5 sm:p-8 rounded-3xl bg-surface shadow-2xl text-center transform transition-all ring-1 ring-black/5 dark:ring-white/10 max-h-[calc(100dvh-1.5rem)] overflow-y-auto"
+          @click.stop
         >
           <!-- Bare Trash Icon (No background container) -->
           <Trash2 class="w-10 h-10 mx-auto mb-3 text-[#D64545] stroke-[1.75]" />

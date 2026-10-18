@@ -52,14 +52,14 @@ onUnmounted(() => {
     >
       <div
         v-if="isOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs select-none"
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-black/50 backdrop-blur-xs select-none overscroll-contain"
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         @click="$emit('cancel')"
       >
         <div
-          class="w-full max-w-sm p-6 sm:p-7 rounded-3xl bg-surface shadow-2xl text-center transform transition-all ring-1 ring-black/5 dark:ring-white/10"
+          class="w-full max-w-sm my-auto p-5 sm:p-7 rounded-3xl bg-surface shadow-2xl text-center transform transition-all ring-1 ring-black/5 dark:ring-white/10 max-h-[calc(100dvh-1.5rem)] overflow-y-auto"
           @click.stop
         >
           <!-- Bare Icon -->

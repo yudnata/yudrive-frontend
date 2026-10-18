@@ -43,14 +43,14 @@ async function handleRefresh() {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs select-none"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto bg-black/60 backdrop-blur-xs select-none overscroll-contain"
       role="dialog"
       aria-modal="true"
       aria-labelledby="usage-modal-title"
       @click="emit('close')"
     >
       <div
-        class="relative w-full max-w-lg rounded-3xl bg-surface p-5 sm:p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 max-h-[90vh] overflow-y-auto no-scrollbar"
+        class="relative w-full max-w-lg my-auto rounded-3xl bg-surface p-5 sm:p-6 shadow-2xl ring-1 ring-black/5 dark:ring-white/10 max-h-[calc(100dvh-1.5rem)] overflow-y-auto no-scrollbar"
         @click.stop
       >
         <!-- Modal Header -->

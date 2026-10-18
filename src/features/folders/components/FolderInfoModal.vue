@@ -128,12 +128,13 @@ async function handleFinishAndClose() {
   <Teleport to="body">
     <div
       v-if="isOpen && folder"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-black/50 backdrop-blur-xs overscroll-contain"
       role="dialog"
       aria-modal="true"
+      @click="handleFinishAndClose"
     >
       <div
-        class="w-full max-w-md rounded-3xl bg-surface shadow-2xl p-6 sm:p-7 text-left max-h-[90vh] flex flex-col"
+        class="w-full max-w-md my-auto rounded-3xl bg-surface shadow-2xl p-5 sm:p-7 text-left max-h-[calc(100dvh-1.5rem)] flex flex-col ring-1 ring-black/5 dark:ring-white/10"
         @click.stop
       >
         <!-- Modal Header: Bare Icon -->

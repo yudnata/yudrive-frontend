@@ -92,12 +92,13 @@ function handleConfirm() {
   <Teleport to="body">
     <div
       v-if="isOpen"
-      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none"
+      class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-black/60 backdrop-blur-xs select-none overscroll-contain"
       role="dialog"
       aria-modal="true"
+      @click="$emit('close')"
     >
       <div
-        class="w-full max-w-md rounded-3xl bg-surface shadow-2xl p-5 sm:p-6 text-left max-h-[85vh] flex flex-col ring-1 ring-black/5 dark:ring-white/10 transform transition-all"
+        class="w-full max-w-md my-auto rounded-3xl bg-surface shadow-2xl p-5 sm:p-6 text-left max-h-[calc(100dvh-1.5rem)] flex flex-col ring-1 ring-black/5 dark:ring-white/10 transform transition-all"
         @click.stop
       >
         <!-- Modal Header -->
