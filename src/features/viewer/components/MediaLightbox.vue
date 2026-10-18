@@ -136,7 +136,20 @@ function formatDate(iso?: string): string {
   }).format(d);
 }
 
+const usedThumbFallback = ref(false);
+
+const activeDisplayUrl = computed(() => {
+  if (usedThumbFallback.value && viewerStore.activeItem?.thumbUrl) {
+    return viewerStore.activeItem.thumbUrl;
+  }
+  return viewerStore.activeUrl;
+});
+
 function handleImageError() {
+  if (!usedThumbFallback.value && viewerStore.activeItem?.thumbUrl) {
+    usedThumbFallback.value = true;
+    return;
+  }
   imageError.value = true;
   // Attempt auto-refresh once on 403 expired URL
   viewerStore.refreshExpiredUrl().then(() => {
@@ -148,6 +161,7 @@ function handleImageError() {
 watch(
   () => viewerStore.currentMediaId,
   () => {
+    usedThumbFallback.value = false;
     imageError.value = false;
   }
 );
@@ -304,7 +318,7 @@ onUnmounted(() => {
             class="relative max-w-full max-h-full flex items-center justify-center"
           >
             <img
-              :src="viewerStore.activeUrl"
+              :src="activeDisplayUrl || undefined"
               :alt="viewerStore.activeFilename || 'Foto kenangan'"
               class="max-w-full max-h-[82vh] object-contain rounded-[14px] shadow-2xl transition-all"
               @error="handleImageError"

@@ -111,6 +111,7 @@ function promptRetry(task: UploadTask) {
                   :src="task.thumbPreviewUrl"
                   alt="Thumbnail"
                   class="w-full h-full object-cover"
+                  @error="task.thumbPreviewUrl = ''"
                 />
                 <FileQuestion v-else class="w-5 h-5 text-muted" />
               </div>

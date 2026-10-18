@@ -113,6 +113,13 @@ export const useUploadStore = defineStore('upload', () => {
       // 1. Process media in browser
       const processed: ProcessedMedia = await processMediaFile(nextTask.file);
 
+      // Update thumbnail preview in UI to processed WebP thumb
+      try {
+        nextTask.thumbPreviewUrl = URL.createObjectURL(processed.thumbBlob);
+      } catch {
+        // Keep existing preview
+      }
+
       // 2. Direct upload to R2
       nextTask.status = 'uploading';
       const mediaId = await directR2Uploader.upload(
@@ -136,9 +143,14 @@ export const useUploadStore = defineStore('upload', () => {
     } catch (err: any) {
       console.error('Upload failed for task', nextTask.id, err);
       nextTask.status = 'failed';
-      nextTask.error = err.message || 'Upload gagal.';
-      nextTask.statusText = err.message || 'Upload gagal.';
-      toast.error(`Gagal mengunggah ${nextTask.filename}: ${err.message}`);
+      const errorMsg =
+        err?.message ||
+        (typeof err === 'string' ? err : null) ||
+        err?.response?.data?.error?.message ||
+        'Gagal memproses atau mengunggah file.';
+      nextTask.error = errorMsg;
+      nextTask.statusText = errorMsg;
+      toast.error(`Gagal mengunggah ${nextTask.filename}: ${errorMsg}`);
     } finally {
       processQueue();
     }

@@ -51,82 +51,208 @@ function canvasToWebpBlob(canvas: HTMLCanvasElement): Promise<Blob> {
   });
 }
 
-// Extract EXIF date or fallback to file lastModified
-async function extractTakenAt(file: File): Promise<string> {
+// Helper: Decode a Blob into an HTMLImageElement safely
+async function decodeImageElementFromBlob(blob: Blob): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(blob);
   try {
-    const exif = await exifr.parse(file, ['DateTimeOriginal']);
-    if (exif?.DateTimeOriginal instanceof Date && !isNaN(exif.DateTimeOriginal.getTime())) {
-      return exif.DateTimeOriginal.toISOString();
-    }
-  } catch {
-    // Ignore exif parse failures
+    return await new Promise<HTMLImageElement>((resolve, reject) => {
+      const el = new Image();
+      el.onload = () => resolve(el);
+      el.onerror = () => reject(new Error('Peramban tidak dapat mendekode gambar.'));
+      el.src = url;
+    });
+  } finally {
+    URL.revokeObjectURL(url);
   }
-
-  return new Date(file.lastModified).toISOString();
 }
 
-// Process photo: handle HEIC conversion, extract dimensions, produce WebP thumb
+// Helper: Render an HTMLImageElement to a WebP thumbnail Blob
+async function renderImageToWebpThumb(img: HTMLImageElement): Promise<Blob> {
+  const origW = img.naturalWidth || 400;
+  const origH = img.naturalHeight || 400;
+  const { w, h } = calculateDimensions(origW, origH);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas 2D context tidak tersedia.');
+
+  ctx.drawImage(img, 0, 0, w, h);
+  return await canvasToWebpBlob(canvas);
+}
+
+// Helper: Create a graceful fallback WebP thumbnail when image decoding is unsupported in current browser
+async function createFallbackThumbnail(filename: string, width = 400, height = 400): Promise<Blob> {
+  const { w, h } = calculateDimensions(width, height);
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+
+  const ctx = canvas.getContext('2d');
+  if (ctx) {
+    const grad = ctx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#FFF0F4');
+    grad.addColorStop(1, '#F7D0DC');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, w, h);
+
+    const centerX = w / 2;
+    const centerY = h / 2 - 12;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, Math.min(w, h) * 0.22, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(201, 61, 104, 0.12)';
+    ctx.fill();
+
+    const ext = filename.split('.').pop()?.toUpperCase() || 'FOTO';
+    ctx.fillStyle = '#C93D68';
+    ctx.font = `bold ${Math.round(Math.min(w, h) * 0.08)}px system-ui, -apple-system, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(ext, centerX, centerY);
+
+    ctx.fillStyle = '#6E4D58';
+    ctx.font = `500 ${Math.round(Math.min(w, h) * 0.045)}px system-ui, -apple-system, sans-serif`;
+    const cleanName = filename.length > 20 ? filename.slice(0, 17) + '...' : filename;
+    ctx.fillText(cleanName, centerX, centerY + Math.min(w, h) * 0.28);
+  }
+
+  return await canvasToWebpBlob(canvas);
+}
+
+// Extract EXIF date & original dimensions from EXIF/container
+async function extractExifMetadata(file: File): Promise<{
+  takenAt: string;
+  width?: number;
+  height?: number;
+}> {
+  let takenAt = new Date(file.lastModified).toISOString();
+  let width: number | undefined;
+  let height: number | undefined;
+
+  try {
+    const exif = await exifr.parse(file, [
+      'DateTimeOriginal',
+      'ImageWidth',
+      'ImageHeight',
+      'ExifImageWidth',
+      'ExifImageHeight',
+      'Orientation',
+    ]);
+
+    if (exif?.DateTimeOriginal instanceof Date && !isNaN(exif.DateTimeOriginal.getTime())) {
+      takenAt = exif.DateTimeOriginal.toISOString();
+    }
+
+    const rawW = exif?.ExifImageWidth || exif?.ImageWidth;
+    const rawH = exif?.ExifImageHeight || exif?.ImageHeight;
+    if (rawW && rawH) {
+      const orientation = exif?.Orientation || 1;
+      if (orientation >= 5 && orientation <= 8) {
+        width = rawH;
+        height = rawW;
+      } else {
+        width = rawW;
+        height = rawH;
+      }
+    }
+  } catch (err) {
+    console.warn('Gagal membaca EXIF dari file:', err);
+  }
+
+  return { takenAt, width, height };
+}
+
+// Process photo: handle HEIC conversion / embedded thumbnail, extract dimensions, produce WebP thumb
 async function processPhoto(file: File): Promise<{
   width: number;
   height: number;
   takenAt: string;
   thumbBlob: Blob;
 }> {
-  const takenAt = await extractTakenAt(file);
-
-  let imageBlob: Blob = file;
+  const meta = await extractExifMetadata(file);
+  const nameLower = file.name.toLowerCase();
   const isHeic =
     file.type === 'image/heic' ||
     file.type === 'image/heif' ||
-    file.name.toLowerCase().endsWith('.heic') ||
-    file.name.toLowerCase().endsWith('.heif');
+    nameLower.endsWith('.heic') ||
+    nameLower.endsWith('.heif');
+
+  let thumbBlob: Blob | null = null;
+  let detectedWidth = meta.width;
+  let detectedHeight = meta.height;
 
   if (isHeic) {
+    // Strategy 1: Extract embedded JPEG thumbnail using exifr (instant, iOS native JPEG preview)
     try {
-      const heic2anyModule = await import('heic2any');
-      const heic2any = (heic2anyModule as any).default || heic2anyModule;
-      const converted = await heic2any({
-        blob: file,
-        toType: 'image/jpeg',
-        quality: 0.85,
-      });
-      imageBlob = Array.isArray(converted) ? converted[0] : converted;
-    } catch (err) {
-      console.warn('heic2any failed to convert, falling back to original blob:', err);
+      const thumbBuffer = await exifr.thumbnail(file);
+      if (thumbBuffer && thumbBuffer.byteLength > 0) {
+        const jpegBlob = new Blob([thumbBuffer as unknown as BlobPart], { type: 'image/jpeg' });
+        const img = await decodeImageElementFromBlob(jpegBlob);
+        thumbBlob = await renderImageToWebpThumb(img);
+      }
+    } catch (thumbErr) {
+      console.warn('Gagal mengekstrak thumbnail tertanam dari HEIC:', thumbErr);
     }
-  }
 
-  const url = URL.createObjectURL(imageBlob);
-  try {
-    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const el = new Image();
-      el.onload = () => resolve(el);
-      el.onerror = reject;
-      el.src = url;
-    });
+    // Strategy 2: If no embedded thumbnail found, try heic2any
+    if (!thumbBlob) {
+      try {
+        const heic2anyModule = await import('heic2any');
+        const heic2any = (heic2anyModule as any).default || heic2anyModule;
+        const converted = await heic2any({
+          blob: file,
+          toType: 'image/jpeg',
+          quality: 0.82,
+        });
+        const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+        const img = await decodeImageElementFromBlob(jpegBlob);
+        if (!detectedWidth || !detectedHeight) {
+          detectedWidth = img.naturalWidth;
+          detectedHeight = img.naturalHeight;
+        }
+        thumbBlob = await renderImageToWebpThumb(img);
+      } catch (hErr) {
+        console.warn('heic2any tidak dapat mengonversi file HEIC:', hErr);
+      }
+    }
 
-    const origW = img.naturalWidth || 800;
-    const origH = img.naturalHeight || 600;
-    const { w, h } = calculateDimensions(origW, origH);
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w;
-    canvas.height = h;
-
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Canvas 2D context tidak tersedia.');
-
-    ctx.drawImage(img, 0, 0, w, h);
-    const thumbBlob = await canvasToWebpBlob(canvas);
+    // Strategy 3: Graceful fallback thumbnail if neither succeeded (NEVER block the upload)
+    if (!thumbBlob) {
+      thumbBlob = await createFallbackThumbnail(file.name, detectedWidth || 400, detectedHeight || 400);
+    }
 
     return {
-      width: origW,
-      height: origH,
-      takenAt,
+      width: detectedWidth || 1920,
+      height: detectedHeight || 1080,
+      takenAt: meta.takenAt,
       thumbBlob,
     };
-  } finally {
-    URL.revokeObjectURL(url);
+  }
+
+  // Non-HEIC standard photos (JPEG, PNG, WEBP, GIF, etc.)
+  try {
+    const img = await decodeImageElementFromBlob(file);
+    const origW = img.naturalWidth || 800;
+    const origH = img.naturalHeight || 600;
+    thumbBlob = await renderImageToWebpThumb(img);
+
+    return {
+      width: detectedWidth || origW,
+      height: detectedHeight || origH,
+      takenAt: meta.takenAt,
+      thumbBlob,
+    };
+  } catch (decodeErr) {
+    console.warn('Peramban gagal merender gambar standar, menggunakan thumbnail fallback:', decodeErr);
+    const fallbackThumb = await createFallbackThumbnail(file.name, detectedWidth || 400, detectedHeight || 400);
+    return {
+      width: detectedWidth || 800,
+      height: detectedHeight || 600,
+      takenAt: meta.takenAt,
+      thumbBlob: fallbackThumb,
+    };
   }
 }
 
@@ -189,10 +315,19 @@ async function processVideo(file: File): Promise<{
 
 // Master media processing function
 export async function processMediaFile(file: File): Promise<ProcessedMedia> {
+  const nameLower = file.name.toLowerCase();
   const isVideo =
     file.type.startsWith('video/') ||
-    file.name.toLowerCase().endsWith('.mov') ||
-    file.name.toLowerCase().endsWith('.mp4');
+    nameLower.endsWith('.mov') ||
+    nameLower.endsWith('.mp4') ||
+    nameLower.endsWith('.webm') ||
+    nameLower.endsWith('.m4v');
+
+  const isHeic =
+    file.type === 'image/heic' ||
+    file.type === 'image/heif' ||
+    nameLower.endsWith('.heic') ||
+    nameLower.endsWith('.heif');
 
   if (isVideo) {
     const res = await processVideo(file);
@@ -209,10 +344,26 @@ export async function processMediaFile(file: File): Promise<ProcessedMedia> {
     };
   } else {
     const res = await processPhoto(file);
+
+    let mime = file.type;
+    if (!mime || mime === 'application/octet-stream') {
+      if (isHeic) {
+        mime = 'image/heic';
+      } else if (nameLower.endsWith('.png')) {
+        mime = 'image/png';
+      } else if (nameLower.endsWith('.webp')) {
+        mime = 'image/webp';
+      } else {
+        mime = 'image/jpeg';
+      }
+    } else if (isHeic && !mime.includes('heic') && !mime.includes('heif')) {
+      mime = 'image/heic';
+    }
+
     return {
       file,
       type: 'photo',
-      mime: file.type || 'image/jpeg',
+      mime,
       size: file.size,
       width: res.width,
       height: res.height,
