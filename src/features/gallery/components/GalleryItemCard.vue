@@ -125,7 +125,7 @@ function formatDuration(sec?: number): string {
             : 'bg-black/40 border-2 border-white/90 backdrop-blur-xs'
         ]"
       >
-        <Check v-if="isSelected" class="w-3.5 h-3.5 stroke-[3]" />
+        <Check v-if="isSelected" class="w-3.5 h-3.5 stroke-3" />
       </div>
     </div>
 

@@ -191,7 +191,7 @@ onUnmounted(() => {
     <div
       v-else-if="!hideMainFab"
       ref="fabContainerRef"
-      class="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom,1.5rem))] right-4 sm:right-6 z-40 flex flex-col items-end gap-3"
+      class="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-35 flex flex-col items-end gap-3"
     >
       <!-- Speed Dial Menu (Expanded Options) -->
       <Transition

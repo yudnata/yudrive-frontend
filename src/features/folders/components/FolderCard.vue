@@ -7,6 +7,7 @@ import { formatEventDate } from '@/utils/date';
 
 const props = defineProps<{
   folder: FolderType;
+  indexNumber?: number;
 }>();
 
 const emit = defineEmits<{
@@ -71,6 +72,15 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
         >
           <FolderIcon class="w-10 h-10 text-[#C93D68]/60 dark:text-[#FF8FAE]/60 fill-current" />
         </div>
+      </div>
+
+      <!-- Sequential Folder Number Badge (#1, #2, #3... always consecutive, no gaps) -->
+      <div
+        v-if="indexNumber !== undefined"
+        class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold tracking-tight flex items-center gap-0.5 pointer-events-none shadow-xs border border-white/10"
+      >
+        <span class="text-[#FF8FAE] font-normal">#</span>
+        <span>{{ indexNumber }}</span>
       </div>
 
       <!-- Quick Item Count Badge -->

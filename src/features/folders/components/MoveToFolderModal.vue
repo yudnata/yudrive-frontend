@@ -104,7 +104,7 @@ function handleConfirm() {
         <div class="flex items-center justify-between pb-3.5 border-b border-black/5 dark:border-white/10">
           <div class="flex items-center gap-2.5">
             <div class="w-8 h-8 rounded-xl bg-[#C93D68]/10 dark:bg-[#FF8FAE]/10 text-[#C93D68] dark:text-[#FF8FAE] flex items-center justify-center shrink-0">
-              <FolderInput class="w-4 h-4 stroke-[2]" />
+              <FolderInput class="w-4 h-4 stroke-2" />
             </div>
             <div>
               <h2 class="text-base font-serif font-bold text-app tracking-tight">
@@ -139,7 +139,7 @@ function handleConfirm() {
         </div>
 
         <!-- Scrollable Folder Choices -->
-        <div class="flex-1 overflow-y-auto py-3 space-y-1.5 min-h-[160px] max-h-[340px]">
+        <div class="flex-1 overflow-y-auto py-3 space-y-1.5 min-h-40 max-h-85">
           <!-- Option 1: Root / Galeri Utama -->
           <button
             type="button"

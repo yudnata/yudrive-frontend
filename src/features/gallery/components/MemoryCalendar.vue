@@ -218,7 +218,7 @@ function formatBytes(bytes?: number): string {
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2.5">
           <div class="w-9 h-9 rounded-2xl bg-[#C93D68]/10 dark:bg-[#FF8FAE]/10 text-[#C93D68] dark:text-[#FF8FAE] flex items-center justify-center">
-            <CalendarHeart class="w-5 h-5 stroke-[2]" />
+            <CalendarHeart class="w-5 h-5 stroke-2" />
           </div>
           <div>
             <h2 class="text-lg sm:text-xl font-serif font-bold text-app tracking-tight">
@@ -276,7 +276,7 @@ function formatBytes(bytes?: number): string {
             v-for="day in calendarDays"
             :key="day.dateStr"
             type="button"
-            class="aspect-square sm:aspect-auto sm:min-h-[58px] p-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer relative group text-xs focus:outline-none"
+            class="aspect-square sm:aspect-auto sm:min-h-14.5 p-1 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer relative group text-xs focus:outline-none"
             :class="[
               selectedDate === day.dateStr
                 ? 'bg-linear-to-tr from-[#FF9BB5] to-[#E0527A] text-white shadow-soft font-bold'

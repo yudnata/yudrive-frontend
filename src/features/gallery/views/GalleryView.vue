@@ -575,9 +575,10 @@ onMounted(async () => {
 
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             <FolderCard
-              v-for="folder in folderStore.folders"
+              v-for="(folder, index) in folderStore.folders"
               :key="folder.id"
               :folder="folder"
+              :index-number="index + 1"
               @select="handleSelectFolder"
               @info="handleOpenFolderInfo"
               @rename="handleStartRename"
@@ -732,9 +733,6 @@ onMounted(async () => {
       v-if="!isSelectionMode"
       v-model="activeTab"
       :favorite-count="favoriteCount"
-      @upload-files="fabRef?.triggerFileInput()"
-      @upload-folder="fabRef?.triggerFolderInput()"
-      @create-folder="handleOpenCreateFolder"
     />
 
     <!-- MULTI-SELECT FLOATING ACTION DOCK -->
@@ -748,7 +746,7 @@ onMounted(async () => {
     >
       <div
         v-if="isSelectionMode"
-        class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[440px] sm:max-w-lg px-3 select-none"
+        class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-110 sm:max-w-lg px-3 select-none"
       >
         <div class="p-2 sm:p-2.5 rounded-3xl bg-surface/95 dark:bg-[#20151C]/95 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-between gap-1 sm:gap-2">
           <!-- Left Info & Select All & Cancel -->
@@ -819,10 +817,10 @@ onMounted(async () => {
       </div>
     </Transition>
 
-    <!-- Upload Hidden Inputs & Drag Overlay (Main FAB hidden since integrated in bottom dock) -->
+    <!-- Upload Floating Action Button (Only shown on Folder page, hidden in selection mode) -->
     <UploadFAB
       ref="fabRef"
-      :hide-main-fab="true"
+      :hide-main-fab="activeTab !== 'folders' || isSelectionMode"
       @create-folder="handleOpenCreateFolder"
     />
     <UploadQueuePanel />

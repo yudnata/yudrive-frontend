@@ -283,7 +283,7 @@ onMounted(async () => {
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
 
         <div class="absolute bottom-3 left-3 right-3 z-10 flex items-center justify-between">
           <span class="text-white text-xs font-semibold drop-shadow-sm truncate">
@@ -307,7 +307,7 @@ onMounted(async () => {
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
           <p class="text-white text-[10px] font-semibold truncate drop-shadow-sm">
             {{ getFolderName(tile1.folderId) }}
@@ -327,7 +327,7 @@ onMounted(async () => {
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
           <p class="text-white text-[10px] font-semibold truncate drop-shadow-sm">
             {{ getFolderName(tile2.folderId) }}
@@ -347,7 +347,7 @@ onMounted(async () => {
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           loading="lazy"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
         <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
           <p class="text-white text-[10px] font-semibold truncate drop-shadow-sm">
             {{ getFolderName(tile3.folderId) }}

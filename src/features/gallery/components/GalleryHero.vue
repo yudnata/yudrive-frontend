@@ -123,7 +123,7 @@ onUnmounted(() => {
         />
 
         <!-- Soft gradient overlay for text readability -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
         <!-- Clean white text with shadow at bottom left showing folder name and optional event date -->
         <div class="absolute bottom-4 left-5 right-5 pointer-events-none flex items-center gap-2 flex-wrap">
