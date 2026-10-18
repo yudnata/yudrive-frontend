@@ -54,11 +54,13 @@ export const useGalleryStore = defineStore('gallery', () => {
   const isLoading = ref(false);
   const isLoadingMore = ref(false);
 
-  // Search & Sort state
+  // Search, Filter & Sort state
   const searchQuery = ref('');
   const sortBy = ref<GallerySortOption>('date-desc');
+  const mediaTypeFilter = ref<'all' | 'photo' | 'video'>('all');
+  const authorFilter = ref<'all' | 'yudhi' | 'wina'>('all');
 
-  // Filtered and sorted items based on searchQuery & active sortBy
+  // Filtered and sorted items based on searchQuery, filters & active sortBy
   const filteredItems = computed<MediaItem[]>(() => {
     let list = items.value;
     const q = searchQuery.value.trim().toLowerCase();
@@ -80,6 +82,18 @@ export const useGalleryStore = defineStore('gallery', () => {
           ownerName.includes(q) ||
           type.includes(q)
         );
+      });
+    }
+
+    if (mediaTypeFilter.value !== 'all') {
+      list = list.filter((item) => item.type === mediaTypeFilter.value);
+    }
+
+    if (authorFilter.value !== 'all') {
+      list = list.filter((item) => {
+        const name = (item.ownerName || '').toLowerCase();
+        const email = (item.ownerEmail || '').toLowerCase();
+        return name.includes(authorFilter.value) || email.includes(authorFilter.value);
       });
     }
 
@@ -395,6 +409,22 @@ export const useGalleryStore = defineStore('gallery', () => {
         queryParams.set('folderId', normalizedFolderId);
       }
 
+      if (searchQuery.value.trim()) {
+        queryParams.set('search', searchQuery.value.trim());
+      }
+
+      if (mediaTypeFilter.value && mediaTypeFilter.value !== 'all') {
+        queryParams.set('type', mediaTypeFilter.value);
+      }
+
+      if (authorFilter.value && authorFilter.value !== 'all') {
+        queryParams.set('author', authorFilter.value);
+      }
+
+      if (sortBy.value) {
+        queryParams.set('sortBy', sortBy.value);
+      }
+
       const res = await apiFetch<{ items: MediaItem[]; nextCursor?: string }>(
         `/media?${queryParams.toString()}`
       );
@@ -484,6 +514,8 @@ export const useGalleryStore = defineStore('gallery', () => {
     items,
     searchQuery,
     sortBy,
+    mediaTypeFilter,
+    authorFilter,
     filteredItems,
     nextCursor,
     hasMore,
