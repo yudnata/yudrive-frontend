@@ -260,6 +260,7 @@ onUnmounted(() => {
   if (searchDebounceTimer) {
     clearTimeout(searchDebounceTimer);
   }
+  window.removeEventListener('popstate', handleAppPopState);
 });
 
 // Multi-select state
@@ -678,7 +679,85 @@ watch(
   }
 );
 
+// Mobile Back Button and Navigation History Guard
+let lastBackPressTime = 0;
+
+function handleAppPopState(e: PopStateEvent) {
+  // If Lightbox is open, let Lightbox handle its closure
+  if (viewerStore.isOpen || e.state?.modal === 'lightbox') {
+    viewerStore.close();
+    return;
+  }
+
+  // 1. If any modal is open, close the modal and remain in app
+  if (
+    isCreateFolderOpen.value ||
+    isFolderInfoOpen.value ||
+    isDeleteConfirmOpen.value ||
+    isBatchMoveOpen.value ||
+    isBatchDeleteOpen.value
+  ) {
+    isCreateFolderOpen.value = false;
+    isFolderInfoOpen.value = false;
+    isDeleteConfirmOpen.value = false;
+    isBatchMoveOpen.value = false;
+    isBatchDeleteOpen.value = false;
+    window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+    return;
+  }
+
+  // 2. If multi-selection mode is active, exit selection mode
+  if (isSelectionMode.value) {
+    handleCancelSelection();
+    window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+    return;
+  }
+
+  // 3. If Sort Dropdown is open, close it
+  if (isSortDropdownOpen.value) {
+    isSortDropdownOpen.value = false;
+    window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+    return;
+  }
+
+  // 4. If inside a folder, navigate back to parent folder or root folder list
+  if (folderStore.currentFolder) {
+    if (folderStore.breadcrumbs.length > 1) {
+      handleNavigateBreadcrumb(folderStore.breadcrumbs.length - 2);
+    } else {
+      handleNavigateRoot();
+    }
+    window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+    return;
+  }
+
+  // 5. If on another tab (folders, calendar, gallery, favorites), go back to Beranda ('home')
+  if (activeTab.value !== 'home') {
+    activeTab.value = 'home';
+    window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+    return;
+  }
+
+  // 6. Already at root ('home' tab with no modals/folders open): Double-press to exit protection
+  const now = Date.now();
+  if (now - lastBackPressTime < 2000) {
+    // User pressed back twice within 2 seconds: allow exit/close
+    return;
+  }
+
+  lastBackPressTime = now;
+  toast.info('Tekan kembali sekali lagi untuk keluar');
+  window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+}
+
 onMounted(async () => {
+  // Mobile Back Button History Guard: push initial state so back button never exits browser abruptly
+  if (!window.history.state?.appRoot) {
+    window.history.replaceState({ ...window.history.state, appRoot: true, step: 0 }, '');
+    window.history.pushState({ ...window.history.state, appRoot: true, step: 1 }, '');
+  }
+  window.addEventListener('popstate', handleAppPopState);
+
   // Fire background auth and favorites non-blocking
   authStore.fetchMe().catch(() => {});
   fetchUniversalFavorites().catch(() => {});

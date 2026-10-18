@@ -9,7 +9,6 @@ import {
   Folder as FolderIcon,
   Sparkles,
   ArrowRight,
-  Plus,
   CalendarDays,
   ArrowUpDown,
   Heart,
@@ -400,15 +399,6 @@ function formatBytes(bytes?: number): string {
             </p>
           </div>
         </div>
-
-        <button
-          type="button"
-          class="text-xs text-[#C93D68] dark:text-[#FF8FAE] hover:underline font-semibold flex items-center gap-1 cursor-pointer"
-          @click="emit('createFolderForDate', selectedDate)"
-        >
-          <Plus class="w-3.5 h-3.5" />
-          Tambah Folder di Tanggal Ini
-        </button>
       </div>
 
       <!-- List of Folders for this Date -->
@@ -451,15 +441,6 @@ function formatBytes(bytes?: number): string {
         class="py-8 text-center text-muted text-xs space-y-2 bg-surface-tint/50 rounded-2xl p-4"
       >
         <p>Belum ada folder kenangan yang diatur di tanggal ini.</p>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          class="cursor-pointer"
-          @click="emit('createFolderForDate', selectedDate)"
-        >
-          Buat Folder untuk {{ formatEventDate(selectedDate) }}
-        </Button>
       </div>
     </div>
 

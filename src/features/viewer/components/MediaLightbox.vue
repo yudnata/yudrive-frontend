@@ -203,6 +203,16 @@ function handleClose() {
 }
 
 function onPopState() {
+  if (showDeleteConfirm.value) {
+    showDeleteConfirm.value = false;
+    window.history.pushState({ ...window.history.state, modal: 'lightbox' }, '');
+    return;
+  }
+  if (showMoveModal.value) {
+    showMoveModal.value = false;
+    window.history.pushState({ ...window.history.state, modal: 'lightbox' }, '');
+    return;
+  }
   if (viewerStore.isOpen) {
     isHandlingPopState = true;
     viewerStore.close();
