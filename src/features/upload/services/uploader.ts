@@ -100,7 +100,8 @@ export class DirectR2Uploader {
   async upload(
     taskId: string,
     media: ProcessedMedia,
-    onProgress: UploadProgressCallback
+    onProgress: UploadProgressCallback,
+    folderId?: string | null
   ): Promise<string> {
     const abortCtrl = new AbortController();
     this.activeUploads.set(taskId, abortCtrl);
@@ -128,6 +129,7 @@ export class DirectR2Uploader {
         height: media.height,
         duration: media.duration,
         takenAt: media.takenAt,
+        folderId: folderId || undefined,
       }),
     });
 

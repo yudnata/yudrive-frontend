@@ -15,6 +15,7 @@ export interface UploadTask {
   id: string;
   file?: File;
   mediaId?: string;
+  folderId?: string | null;
   thumbPreviewUrl: string;
   filename: string;
   sizeBytes: number;
@@ -60,7 +61,7 @@ export const useUploadStore = defineStore('upload', () => {
   }
 
   // Add selected files to the queue
-  async function addFiles(fileList: FileList | File[]) {
+  async function addFiles(fileList: FileList | File[], folderId?: string | null) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
 
@@ -73,6 +74,7 @@ export const useUploadStore = defineStore('upload', () => {
       const task: UploadTask = {
         id,
         file,
+        folderId: folderId !== undefined ? folderId : undefined,
         filename: file.name,
         sizeBytes: file.size,
         thumbPreviewUrl,
@@ -119,7 +121,8 @@ export const useUploadStore = defineStore('upload', () => {
         (percent, statusText) => {
           nextTask.progress = percent;
           nextTask.statusText = statusText;
-        }
+        },
+        nextTask.folderId
       );
 
       nextTask.mediaId = mediaId;
@@ -128,7 +131,7 @@ export const useUploadStore = defineStore('upload', () => {
       nextTask.progress = 100;
 
       // Refresh gallery and storage quota
-      galleryStore.fetchMedia(true).catch(() => {});
+      galleryStore.fetchMedia(true, nextTask.folderId).catch(() => {});
       authStore.fetchMe().catch(() => {});
     } catch (err: any) {
       console.error('Upload failed for task', nextTask.id, err);

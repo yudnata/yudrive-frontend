@@ -14,6 +14,7 @@ export interface StorageUsage {
 export interface MediaItem {
   id: string;
   ownerId: string;
+  folderId?: string;
   type: 'photo' | 'video';
   mime: string;
   sizeBytes: number;
@@ -23,4 +24,17 @@ export interface MediaItem {
   takenAt?: string;
   thumbUrl?: string;
   createdAt: string;
+}
+
+export interface Folder {
+  id: string;
+  ownerId: string;
+  name: string;
+  parentId?: string | null;
+  coverMediaId?: string | null;
+  coverUrl?: string | null;
+  itemCount: number;
+  totalBytes: number;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -47,7 +47,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     }));
   });
 
-  async function fetchMedia(refresh = false): Promise<void> {
+  async function fetchMedia(refresh = false, folderId?: string | null): Promise<void> {
     if (isLoading.value || isLoadingMore.value) return;
 
     if (refresh) {
@@ -63,6 +63,14 @@ export const useGalleryStore = defineStore('gallery', () => {
       const queryParams = new URLSearchParams({ limit: '30' });
       if (!refresh && nextCursor.value) {
         queryParams.set('cursor', nextCursor.value);
+      }
+
+      if (folderId !== undefined) {
+        if (folderId) {
+          queryParams.set('folderId', folderId);
+        } else {
+          queryParams.set('folderId', 'root');
+        }
       }
 
       const res = await apiFetch<{ items: MediaItem[]; nextCursor?: string }>(
@@ -86,6 +94,12 @@ export const useGalleryStore = defineStore('gallery', () => {
     }
   }
 
+  function prependItem(item: MediaItem): void {
+    if (!items.value.some((i) => i.id === item.id)) {
+      items.value.unshift(item);
+    }
+  }
+
   function removeItem(mediaId: string): void {
     items.value = items.value.filter((i) => i.id !== mediaId);
   }
@@ -98,6 +112,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     isLoadingMore,
     groupedByDate,
     fetchMedia,
+    prependItem,
     removeItem,
   };
 });
