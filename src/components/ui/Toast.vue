@@ -21,7 +21,7 @@ const { toasts, remove } = useToast();
         v-for="toast in toasts"
         :key="toast.id"
         :class="[
-          'pointer-events-auto flex items-start gap-3 p-4 rounded-[16px] shadow-soft border text-sm',
+          'pointer-events-auto flex items-start gap-3 p-4 rounded-2xl shadow-soft border text-sm',
           toast.type === 'success'
             ? 'bg-surface text-app border-[#3F9D7A]/30'
             : toast.type === 'error'
@@ -51,7 +51,7 @@ const { toasts, remove } = useToast();
 
         <button
           type="button"
-          class="shrink-0 text-muted hover:text-app p-1 rounded-md transition-colors min-h-[32px] min-w-[32px] flex items-center justify-center -mr-1 -mt-1"
+          class="shrink-0 text-muted hover:text-app p-1 rounded-md transition-colors min-h-8 min-w-8 flex items-center justify-center -mr-1 -mt-1"
           aria-label="Tutup pemberitahuan"
           @click="remove(toast.id)"
         >

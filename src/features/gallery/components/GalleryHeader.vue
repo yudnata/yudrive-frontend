@@ -41,7 +41,7 @@ function formatBytes(bytes?: number): string {
       <div class="relative">
         <button
           type="button"
-          class="relative flex items-center gap-2 p-1.5 rounded-full border border-app hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] min-h-[44px] min-w-[44px] transition-colors"
+          class="relative flex items-center gap-2 p-1.5 rounded-full border border-app hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] min-h-11 min-w-11 transition-colors"
           aria-label="Menu profil dan pengaturan tampilan"
           @click="isMenuOpen = !isMenuOpen"
         >
@@ -112,10 +112,10 @@ function formatBytes(bytes?: number): string {
           <!-- Theme Preference Selector -->
           <div class="py-3 border-b border-app">
             <p class="text-xs font-medium text-app mb-2">Tema Tampilan</p>
-            <div class="grid grid-cols-3 gap-1.5 bg-surface-tint p-1 rounded-[12px] border border-app">
+            <div class="grid grid-cols-3 gap-1.5 bg-surface-tint p-1 rounded-xl border border-app">
               <button
                 type="button"
-                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-[8px] text-[11px] font-medium transition-colors min-h-[36px]"
+                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-medium transition-colors min-h-9"
                 :class="theme === 'system' ? 'bg-surface text-app shadow-soft-sm' : 'text-muted hover:text-app'"
                 @click="setTheme('system')"
               >
@@ -124,7 +124,7 @@ function formatBytes(bytes?: number): string {
               </button>
               <button
                 type="button"
-                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-[8px] text-[11px] font-medium transition-colors min-h-[36px]"
+                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-medium transition-colors min-h-9"
                 :class="theme === 'light' ? 'bg-surface text-app shadow-soft-sm' : 'text-muted hover:text-app'"
                 @click="setTheme('light')"
               >
@@ -133,7 +133,7 @@ function formatBytes(bytes?: number): string {
               </button>
               <button
                 type="button"
-                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-[8px] text-[11px] font-medium transition-colors min-h-[36px]"
+                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-lg text-[11px] font-medium transition-colors min-h-9"
                 :class="theme === 'dark' ? 'bg-surface text-app shadow-soft-sm' : 'text-muted hover:text-app'"
                 @click="setTheme('dark')"
               >
@@ -146,7 +146,7 @@ function formatBytes(bytes?: number): string {
           <!-- Logout Action -->
           <button
             type="button"
-            class="w-full mt-2 flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#D64545] hover:bg-surface-tint rounded-[10px] transition-colors min-h-[44px]"
+            class="w-full mt-2 flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#D64545] hover:bg-surface-tint rounded-[10px] transition-colors min-h-11"
             @click="handleLogout"
           >
             <LogOut class="w-4 h-4" />

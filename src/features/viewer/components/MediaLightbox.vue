@@ -124,7 +124,7 @@ onUnmounted(() => {
           <div class="flex items-center gap-3">
             <button
               type="button"
-              class="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center text-white/90"
+              class="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors min-h-11 min-w-11 flex items-center justify-center text-white/90"
               aria-label="Tutup penampil kenangan"
               @click="viewerStore.close"
             >
@@ -151,7 +151,7 @@ onUnmounted(() => {
             <!-- Favorite Pop Button -->
             <button
               type="button"
-              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-transform active:scale-125 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-transform active:scale-125 min-h-11 min-w-11 flex items-center justify-center"
               :class="{ 'text-[#FF8FAE]': isFavorited }"
               aria-label="Tandai favorit"
               @click="isFavorited = !isFavorited"
@@ -165,7 +165,7 @@ onUnmounted(() => {
             <!-- Download Button -->
             <button
               type="button"
-              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-colors min-h-11 min-w-11 flex items-center justify-center"
               aria-label="Unduh file asli"
               @click="triggerDownload"
             >
@@ -175,7 +175,7 @@ onUnmounted(() => {
             <!-- Delete Button -->
             <button
               type="button"
-              class="p-2 rounded-full hover:bg-white/10 text-white/80 hover:text-[#D64545] transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              class="p-2 rounded-full hover:bg-white/10 text-white/80 hover:text-[#D64545] transition-colors min-h-11 min-w-11 flex items-center justify-center"
               aria-label="Hapus kenangan ini"
               @click="showDeleteConfirm = true"
             >

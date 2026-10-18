@@ -15,7 +15,7 @@ withDefaults(defineProps<Props>(), {
     :class="[
       'border border-app shadow-soft transition-all',
       tinted ? 'bg-surface-tint' : 'bg-surface',
-      rounded === 'sm' ? 'rounded-[12px]' : rounded === 'md' ? 'rounded-[16px]' : 'rounded-[24px]',
+      rounded === 'sm' ? 'rounded-xl' : rounded === 'md' ? 'rounded-2xl' : 'rounded-3xl',
     ]"
   >
     <slot />

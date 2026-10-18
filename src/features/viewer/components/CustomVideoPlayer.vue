@@ -218,7 +218,7 @@ onUnmounted(() => {
         </button>
         <button
           type="button"
-          class="px-4 py-2.5 text-xs font-semibold rounded-[12px] border border-white/20 text-white/90 hover:bg-white/10 flex items-center gap-1.5"
+          class="px-4 py-2.5 text-xs font-semibold rounded-xl border border-white/20 text-white/90 hover:bg-white/10 flex items-center gap-1.5"
           @click="$emit('expired')"
         >
           <RotateCw class="w-3.5 h-3.5" />
@@ -249,7 +249,7 @@ onUnmounted(() => {
     >
       <div
         v-if="showControls && !playbackError"
-        class="absolute bottom-0 inset-x-0 p-4 bg-gradient-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-2 z-10"
+        class="absolute bottom-0 inset-x-0 p-4 bg-linear-to-t from-black/80 via-black/40 to-transparent flex flex-col gap-2 z-10"
       >
         <!-- Pink Seek Bar with Buffer and Scrub -->
         <div
@@ -265,7 +265,7 @@ onUnmounted(() => {
             />
             <!-- Playback Progress in Pink Theme -->
             <div
-              class="absolute inset-y-0 left-0 bg-gradient-to-r from-[#FF9BB5] to-[#E0527A] rounded-full"
+              class="absolute inset-y-0 left-0 bg-linear-to-r from-[#FF9BB5] to-[#E0527A] rounded-full"
               :style="{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }"
             />
           </div>
@@ -282,7 +282,7 @@ onUnmounted(() => {
           <div class="flex items-center gap-3">
             <button
               type="button"
-              class="p-1.5 hover:text-[#FF8FAE] transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              class="p-1.5 hover:text-[#FF8FAE] transition-colors min-h-9 min-w-9 flex items-center justify-center"
               :aria-label="isPlaying ? 'Jeda' : 'Putar'"
               @click="togglePlay"
             >
@@ -292,7 +292,7 @@ onUnmounted(() => {
 
             <button
               type="button"
-              class="p-1.5 hover:text-[#FF8FAE] transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              class="p-1.5 hover:text-[#FF8FAE] transition-colors min-h-9 min-w-9 flex items-center justify-center"
               :aria-label="isMuted ? 'Nyalakan suara' : 'Bisukan'"
               @click="toggleMute"
             >
@@ -309,7 +309,7 @@ onUnmounted(() => {
           <div class="flex items-center gap-2">
             <button
               type="button"
-              class="p-1.5 hover:text-[#FF8FAE] transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              class="p-1.5 hover:text-[#FF8FAE] transition-colors min-h-9 min-w-9 flex items-center justify-center"
               aria-label="Layar penuh"
               @click="toggleFullscreen"
             >

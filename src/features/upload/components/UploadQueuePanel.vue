@@ -62,7 +62,7 @@ function promptRetry(task: UploadTask) {
     >
       <div
         v-if="uploadStore.isPanelOpen && uploadStore.hasTasks"
-        class="fixed bottom-24 right-4 left-4 sm:left-auto sm:w-[420px] max-h-[75vh] flex flex-col z-40 bg-surface border border-app rounded-[24px] shadow-soft overflow-hidden"
+        class="fixed bottom-24 right-4 left-4 sm:left-auto sm:w-105 max-h-[75vh] flex flex-col z-40 bg-surface border border-app rounded-3xl shadow-soft overflow-hidden"
       >
         <!-- Panel Header -->
         <div class="px-5 py-4 border-b border-app flex items-center justify-between bg-surface-tint">
@@ -87,7 +87,7 @@ function promptRetry(task: UploadTask) {
 
             <button
               type="button"
-              class="text-muted hover:text-app p-1.5 rounded-full hover:bg-surface transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
+              class="text-muted hover:text-app p-1.5 rounded-full hover:bg-surface transition-colors min-h-9 min-w-9 flex items-center justify-center"
               aria-label="Tutup panel antrean"
               @click="uploadStore.isPanelOpen = false"
             >

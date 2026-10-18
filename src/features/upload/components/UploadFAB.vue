@@ -106,7 +106,7 @@ onUnmounted(() => {
       <button
         v-if="uploadStore.hasTasks"
         type="button"
-        class="glass-nav bg-surface/90 text-app px-4 py-2 rounded-full border border-app shadow-soft text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-[44px] transition-all"
+        class="glass-nav bg-surface/90 text-app px-4 py-2 rounded-full border border-app shadow-soft text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-11 transition-all"
         @click="uploadStore.isPanelOpen = !uploadStore.isPanelOpen"
       >
         <span
@@ -120,7 +120,7 @@ onUnmounted(() => {
       <!-- Main FAB Button -->
       <button
         type="button"
-        class="relative w-14 h-14 rounded-full bg-gradient-to-tr from-[#FF9BB5] to-[#E0527A] text-white shadow-soft flex items-center justify-center hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#FFD9E3] transition-all"
+        class="relative w-14 h-14 rounded-full bg-linear-to-tr from-[#FF9BB5] to-[#E0527A] text-white shadow-soft flex items-center justify-center hover:scale-105 active:scale-95 focus:outline-none focus-visible:ring-4 focus-visible:ring-[#FFD9E3] transition-all"
         aria-label="Upload foto atau video baru"
         @click="triggerFileInput"
       >

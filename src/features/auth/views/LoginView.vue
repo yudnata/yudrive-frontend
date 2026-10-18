@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth.store';
 import { useToast } from '@/composables/useToast';
@@ -15,6 +15,15 @@ const toast = useToast();
 const email = ref('');
 const password = ref('');
 const error = ref('');
+const rememberMe = ref(true);
+
+onMounted(() => {
+  const savedEmail = localStorage.getItem('remembered_email');
+  if (savedEmail) {
+    email.value = savedEmail;
+    rememberMe.value = true;
+  }
+});
 
 async function onSubmit() {
   error.value = '';
@@ -25,6 +34,13 @@ async function onSubmit() {
 
   try {
     await authStore.login(email.value, password.value);
+    
+    if (rememberMe.value) {
+      localStorage.setItem('remembered_email', email.value);
+    } else {
+      localStorage.removeItem('remembered_email');
+    }
+
     toast.success('Selamat datang kembali!');
     router.push('/');
   } catch (err: any) {
@@ -34,7 +50,7 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-[#FFF7F9] via-[#FFF7F9] to-[#FFEEF3] dark:from-[#1E1419] dark:via-[#1E1419] dark:to-[#2A1D24]">
+  <div class="min-h-screen flex items-center justify-center p-4 bg-linear-to-b from-[#FFF7F9] via-[#FFF7F9] to-[#FFEEF3] dark:from-[#1E1419] dark:via-[#1E1419] dark:to-[#2A1D24]">
     <div class="w-full max-w-md">
       <Card rounded="lg" class="p-8 sm:p-10">
         <!-- Logo & Header -->
@@ -73,13 +89,13 @@ async function onSubmit() {
         </div>
 
         <!-- Login Form -->
-        <form @submit.prevent="onSubmit" class="space-y-5">
+        <form @submit.prevent="onSubmit" class="space-y-4">
           <Input
             id="login-email"
             v-model="email"
             label="Email"
             type="email"
-            placeholder="partner@ourmemories.local"
+            placeholder="nama@email.com"
             required
             autocomplete="email"
           >
@@ -102,7 +118,19 @@ async function onSubmit() {
             </template>
           </Input>
 
-          <div class="pt-2">
+          <!-- Remember Me Checkbox -->
+          <div class="flex items-center justify-between pt-1">
+            <label class="flex items-center gap-2.5 cursor-pointer select-none text-xs text-muted hover:text-app transition-colors min-h-11">
+              <input
+                type="checkbox"
+                v-model="rememberMe"
+                class="w-4 h-4 rounded border-app text-[#C93D68] accent-[#C93D68] focus:ring-[#FFD9E3] focus:ring-offset-0 bg-surface cursor-pointer transition-colors"
+              />
+              <span>Ingat saya di perangkat ini</span>
+            </label>
+          </div>
+
+          <div class="pt-1">
             <Button
               type="submit"
               variant="primary"

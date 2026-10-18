@@ -47,7 +47,7 @@ onUnmounted(() => {
         aria-labelledby="delete-modal-title"
       >
         <div
-          class="w-full max-w-sm p-6 sm:p-8 rounded-[24px] bg-surface border border-app shadow-soft text-center transform transition-all"
+          class="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-surface border border-app shadow-soft text-center transform transition-all"
         >
           <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-[#D64545]/15 text-[#D64545] flex items-center justify-center">
             <Trash2 class="w-6 h-6" />

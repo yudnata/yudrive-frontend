@@ -50,7 +50,7 @@ defineEmits<{
         :disabled="disabled"
         :autocomplete="autocomplete"
         :class="[
-          'w-full py-3 rounded-[12px] border bg-surface text-sm text-app transition-all',
+          'w-full py-3 rounded-xl border bg-surface text-sm text-app transition-all',
           'focus:outline-none focus:ring-2 focus:ring-[#FFD9E3] dark:focus:ring-[#4A2635]',
           'disabled:opacity-60 disabled:cursor-not-allowed',
           $slots.leading ? 'pl-10' : 'pl-4',
