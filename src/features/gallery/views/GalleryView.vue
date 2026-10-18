@@ -976,7 +976,7 @@ onMounted(async () => {
               v-model="galleryStore.searchQuery"
               type="text"
               placeholder="Cari nama folder (misal: Twozza, Liburan) atau foto..."
-              class="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white dark:bg-surface text-xs sm:text-sm font-medium text-app placeholder:text-muted/70 shadow-soft-sm border border-black/5 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#C93D68]/30 transition-all"
+              class="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-surface text-xs sm:text-sm font-medium text-app placeholder:text-muted/70 shadow-soft-sm border border-black/5 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#C93D68]/30 transition-all"
             />
             <button
               v-if="galleryStore.searchQuery"
@@ -993,7 +993,7 @@ onMounted(async () => {
           <div ref="sortDropdownRef" class="relative shrink-0">
             <button
               type="button"
-              class="w-full sm:w-auto flex items-center justify-between gap-2.5 pl-3.5 pr-3 py-2.5 rounded-2xl bg-white dark:bg-surface text-xs font-semibold text-app shadow-soft-sm border border-black/5 dark:border-white/10 hover:border-[#C93D68]/30 dark:hover:border-[#FF8FAE]/30 focus:outline-none focus:ring-2 focus:ring-[#C93D68]/30 transition-all cursor-pointer select-none"
+              class="w-full sm:w-auto flex items-center justify-between gap-2.5 pl-3.5 pr-3 py-2.5 rounded-2xl bg-surface text-xs font-semibold text-app shadow-soft-sm border border-black/5 dark:border-white/10 hover:border-[#C93D68]/30 dark:hover:border-[#FF8FAE]/30 focus:outline-none focus:ring-2 focus:ring-[#C93D68]/30 transition-all cursor-pointer select-none"
               aria-haspopup="listbox"
               :aria-expanded="isSortDropdownOpen"
               @click="isSortDropdownOpen = !isSortDropdownOpen"
@@ -1057,7 +1057,7 @@ onMounted(async () => {
         <div class="flex flex-wrap items-center justify-between gap-2.5 pt-1">
           <!-- Media Type Filter Pills -->
           <div
-            class="flex items-center gap-1 p-1 rounded-2xl bg-white dark:bg-surface shadow-soft-xs border border-black/5 dark:border-white/10 text-xs font-semibold"
+            class="flex items-center gap-1 p-1 rounded-2xl bg-surface shadow-soft-xs border border-black/5 dark:border-white/10 text-xs font-semibold"
             role="radiogroup"
             aria-label="Filter tipe media"
           >

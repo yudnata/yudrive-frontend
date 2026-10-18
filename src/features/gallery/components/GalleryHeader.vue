@@ -44,7 +44,7 @@ function formatBytes(bytes?: number): string {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 w-full bg-white dark:bg-surface shadow-xs border-b border-black/[0.04] dark:border-white/[0.06] transition-colors">
+  <header class="sticky top-0 z-30 w-full bg-surface shadow-xs border-b border-black/[0.04] dark:border-white/[0.06] transition-colors">
     <div class="max-w-6xl mx-auto px-4 h-12 sm:h-13 flex items-center justify-between">
       <!-- Logo: Bare heart icon without background container -->
       <div class="flex items-center gap-1.5 sm:gap-2">

@@ -6,6 +6,8 @@
 @theme {
   --font-sans: 'Quicksand', system-ui, -apple-system, sans-serif;
   --font-serif: 'Quicksand', system-ui, -apple-system, sans-serif;
+  --color-surface: var(--surface);
+  --color-surface-tint: var(--surface-tint);
 }
 
 :root {
