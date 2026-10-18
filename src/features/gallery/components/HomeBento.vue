@@ -5,7 +5,6 @@ import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { apiFetch } from '@/services/api';
 import { MediaItem, Folder as FolderType } from '@/types';
 import {
-  Home,
   Shuffle,
   Heart,
   Folder as FolderIcon,
@@ -132,8 +131,7 @@ onMounted(async () => {
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
-          <Home class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
-          <span>Kilas Kenangan Kita</span>
+          <span>Kilas Kenangan</span>
         </h2>
         <p class="text-xs text-muted mt-0.5">
           Koleksi momen acak penuh cerita indah berdua
@@ -171,7 +169,7 @@ onMounted(async () => {
     <!-- BENTO GRID CONTAINER -->
     <div
       v-else
-      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-[160px] sm:auto-rows-[180px]"
+      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-40 sm:auto-rows-45"
     >
       <!-- 1. HERO CARD (Large 2x2 Feature Card) -->
       <div
@@ -187,7 +185,7 @@ onMounted(async () => {
         />
 
         <!-- Soft Vignette Gradient -->
-        <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
 
         <!-- Top Badge -->
         <div class="absolute top-3.5 left-3.5 z-10">
@@ -264,7 +262,7 @@ onMounted(async () => {
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
 
         <div class="absolute bottom-3 left-3 right-3 z-10">
           <span class="text-white text-[11px] font-semibold drop-shadow-sm truncate block">

@@ -118,6 +118,31 @@ export const useGalleryStore = defineStore('gallery', () => {
     return updated;
   }
 
+  async function batchDelete(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+    await apiFetch<{ success: boolean; deletedCount: number }>('/media/batch-delete', {
+      method: 'POST',
+      body: JSON.stringify({ ids }),
+    });
+    const idSet = new Set(ids);
+    items.value = items.value.filter((i) => !idSet.has(i.id));
+  }
+
+  async function batchMove(ids: string[], folderId: string | null): Promise<void> {
+    if (ids.length === 0) return;
+    await apiFetch<{ success: boolean; movedCount: number }>('/media/batch-move', {
+      method: 'POST',
+      body: JSON.stringify({ ids, folderId: folderId || null }),
+    });
+    const idSet = new Set(ids);
+    items.value = items.value.map((item) => {
+      if (idSet.has(item.id)) {
+        return { ...item, folderId: folderId || undefined };
+      }
+      return item;
+    });
+  }
+
   return {
     items,
     nextCursor,
@@ -129,5 +154,7 @@ export const useGalleryStore = defineStore('gallery', () => {
     prependItem,
     removeItem,
     moveMedia,
+    batchDelete,
+    batchMove,
   };
 });

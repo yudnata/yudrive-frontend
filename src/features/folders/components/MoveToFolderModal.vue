@@ -14,11 +14,19 @@ import {
 } from 'lucide-vue-next';
 import { formatEventDateShort } from '@/utils/date';
 
-const props = defineProps<{
-  isOpen: boolean;
-  currentFolderId?: string | null;
-  isLoading?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    isOpen: boolean;
+    currentFolderId?: string | null;
+    isLoading?: boolean;
+    title?: string;
+    description?: string;
+  }>(),
+  {
+    title: 'Pindahkan ke Folder',
+    description: 'Pilih folder tujuan untuk kenangan ini',
+  }
+);
 
 const emit = defineEmits<{
   (e: 'move', targetFolderId: string | null): void;
@@ -100,10 +108,10 @@ function handleConfirm() {
             </div>
             <div>
               <h2 class="text-base font-serif font-bold text-app tracking-tight">
-                Pindahkan ke Folder
+                {{ title }}
               </h2>
               <p class="text-[11px] text-muted">
-                Pilih folder tujuan untuk foto ini
+                {{ description }}
               </p>
             </div>
           </div>

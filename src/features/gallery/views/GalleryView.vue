@@ -17,6 +17,7 @@ import GalleryEmptyState from '../components/GalleryEmptyState.vue';
 import FolderCard from '@/features/folders/components/FolderCard.vue';
 import CreateFolderModal from '@/features/folders/components/CreateFolderModal.vue';
 import FolderInfoModal from '@/features/folders/components/FolderInfoModal.vue';
+import MoveToFolderModal from '@/features/folders/components/MoveToFolderModal.vue';
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import MemoryCalendar from '../components/MemoryCalendar.vue';
 import UploadFAB from '@/features/upload/components/UploadFAB.vue';
@@ -24,6 +25,7 @@ import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue'
 import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
 import FloatingHearts from '@/components/ui/FloatingHearts.vue';
 import Button from '@/components/ui/Button.vue';
+import { apiFetch } from '@/services/api';
 import { MediaItem, Folder as FolderType } from '@/types';
 import {
   Coffee,
@@ -33,6 +35,10 @@ import {
   ChevronRight,
   Home,
   Heart,
+  Download,
+  Trash2,
+  FolderInput,
+  X,
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -95,6 +101,27 @@ const isDeleteConfirmOpen = ref(false);
 const folderToDelete = ref<FolderType | null>(null);
 const isDeletingFolder = ref(false);
 
+// Multi-select state
+const isSelectionMode = ref(false);
+const selectedIds = ref<Set<string>>(new Set());
+const isDownloadingBatch = ref(false);
+const isBatchMoveOpen = ref(false);
+const isBatchMoving = ref(false);
+const isBatchDeleteOpen = ref(false);
+const isBatchDeleting = ref(false);
+
+const currentViewItems = computed<MediaItem[]>(() => {
+  if (activeTab.value === 'favorites') {
+    return favoriteItems.value;
+  }
+  return galleryStore.items;
+});
+
+const isAllSelected = computed(() => {
+  if (currentViewItems.value.length === 0) return false;
+  return currentViewItems.value.every((item) => selectedIds.value.has(item.id));
+});
+
 // Trigger infinite scroll when scrolling near bottom
 useIntersectionObserver(
   sentinelRef,
@@ -107,7 +134,109 @@ useIntersectionObserver(
 );
 
 function handleSelectMedia(item: MediaItem) {
-  viewerStore.open(item.id);
+  if (isSelectionMode.value) {
+    handleToggleSelectMedia(item);
+  } else {
+    viewerStore.open(item.id);
+  }
+}
+
+function handleLongPressMedia(item: MediaItem) {
+  isSelectionMode.value = true;
+  selectedIds.value = new Set([item.id]);
+}
+
+function handleToggleSelectMedia(item: MediaItem) {
+  const next = new Set(selectedIds.value);
+  if (next.has(item.id)) {
+    next.delete(item.id);
+  } else {
+    next.add(item.id);
+  }
+  selectedIds.value = next;
+}
+
+function handleToggleSelectAll() {
+  if (isAllSelected.value) {
+    selectedIds.value = new Set();
+  } else {
+    selectedIds.value = new Set(currentViewItems.value.map((i) => i.id));
+  }
+}
+
+function handleCancelSelection() {
+  isSelectionMode.value = false;
+  selectedIds.value = new Set();
+}
+
+async function handleBatchDownload() {
+  if (selectedIds.value.size === 0 || isDownloadingBatch.value) return;
+  isDownloadingBatch.value = true;
+  const ids = Array.from(selectedIds.value);
+  toast.info(`Mempersiapkan pengunduhan ${ids.length} kenangan...`);
+
+  try {
+    for (let i = 0; i < ids.length; i++) {
+      const id = ids[i];
+      try {
+        const res = await apiFetch<{ url: string; filename: string }>(`/media/${id}/url?download=true`);
+        if (res?.url) {
+          const link = document.createElement('a');
+          link.href = res.url;
+          link.download = res.filename || 'kenangan.jpg';
+          link.target = '_blank';
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }
+      } catch (err) {
+        console.error(`Gagal mengunduh media ${id}:`, err);
+      }
+      if (i < ids.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 350));
+      }
+    }
+    toast.success(`Berhasil mengunduh ${ids.length} kenangan.`);
+    handleCancelSelection();
+  } catch (err: any) {
+    toast.error(`Gagal mengunduh: ${err.message || 'Terjadi kesalahan'}`);
+  } finally {
+    isDownloadingBatch.value = false;
+  }
+}
+
+async function handleConfirmBatchMove(targetFolderId: string | null) {
+  if (selectedIds.value.size === 0 || isBatchMoving.value) return;
+  isBatchMoving.value = true;
+  try {
+    const ids = Array.from(selectedIds.value);
+    await galleryStore.batchMove(ids, targetFolderId);
+    toast.success(`Berhasil memindahkan ${ids.length} kenangan.`);
+    isBatchMoveOpen.value = false;
+    handleCancelSelection();
+    await galleryStore.fetchMedia(true, folderStore.currentFolder?.id);
+  } catch (err: any) {
+    toast.error(`Gagal memindahkan file: ${err.message || 'Terjadi kesalahan'}`);
+  } finally {
+    isBatchMoving.value = false;
+  }
+}
+
+async function handleConfirmBatchDelete() {
+  if (selectedIds.value.size === 0 || isBatchDeleting.value) return;
+  isBatchDeleting.value = true;
+  try {
+    const ids = Array.from(selectedIds.value);
+    await galleryStore.batchDelete(ids);
+    toast.success(`Berhasil menghapus ${ids.length} kenangan.`);
+    isBatchDeleteOpen.value = false;
+    handleCancelSelection();
+    await folderStore.fetchFolders(folderStore.currentFolder?.parentId || null);
+  } catch (err: any) {
+    toast.error(`Gagal menghapus file: ${err.message || 'Terjadi kesalahan'}`);
+  } finally {
+    isBatchDeleting.value = false;
+  }
 }
 
 function handleEmptyUpload() {
@@ -290,6 +419,7 @@ async function syncFolderFromRoute(folderId?: string) {
 }
 
 watch(activeTab, (newTab) => {
+  handleCancelSelection();
   if (route.query.tab !== newTab) {
     router.replace({
       path: '/',
@@ -361,8 +491,11 @@ onMounted(async () => {
     <!-- Main Explorer / Gallery Container with generous bottom padding for floating dock -->
     <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 pb-32 sm:pb-36">
       
-      <!-- TAB 1: BERANDA (BENTO GRID OF RANDOMIZED MEMORIES) -->
-      <section v-if="activeTab === 'home'">
+      <!-- TAB 1: BERANDA (HERO SLIDESHOW + BENTO GRID) -->
+      <section v-if="activeTab === 'home'" class="space-y-6">
+        <!-- HERO SECTION AT TOP OF BERANDA -->
+        <GalleryHero />
+
         <HomeBento
           @select-media="handleSelectMedia"
           @select-folder="handleBentoSelectFolder"
@@ -372,9 +505,6 @@ onMounted(async () => {
 
       <!-- TAB 2: FOLDERS (WINDOWS EXPLORER STYLE BREADCRUMBS & FOLDERS) -->
       <section v-else-if="activeTab === 'folders'" class="space-y-6">
-        <!-- HERO SECTION AT TOP OF FOLDERS -->
-        <GalleryHero v-if="!folderStore.currentFolder" />
-
         <!-- Breadcrumb Navigation Bar (Windows Explorer Style, Shadow-based) -->
         <nav
           class="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-2xl bg-surface shadow-soft-sm"
@@ -484,7 +614,11 @@ onMounted(async () => {
               :key="group.dateKey"
               :date-label="group.dateLabel"
               :items="group.items"
+              :is-selection-mode="isSelectionMode"
+              :selected-ids="selectedIds"
               @select="handleSelectMedia"
+              @longpress="handleLongPressMedia"
+              @toggle-select="handleToggleSelectMedia"
             />
           </div>
         </section>
@@ -531,7 +665,11 @@ onMounted(async () => {
             :key="group.dateKey"
             :date-label="group.dateLabel"
             :items="group.items"
+            :is-selection-mode="isSelectionMode"
+            :selected-ids="selectedIds"
             @select="handleSelectMedia"
+            @longpress="handleLongPressMedia"
+            @toggle-select="handleToggleSelectMedia"
           />
 
           <!-- Sentinel element for infinite scroll -->
@@ -547,7 +685,7 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- TAB 4: FAVORIT (STARRED / LIKED MOMENTS) -->
+      <!-- TAB 5: FAVORIT (STARRED / LIKED MOMENTS) -->
       <section v-else-if="activeTab === 'favorites'" class="space-y-4">
         <div class="flex items-center justify-between">
           <div>
@@ -579,20 +717,107 @@ onMounted(async () => {
             :key="group.dateKey"
             :date-label="group.dateLabel"
             :items="group.items"
+            :is-selection-mode="isSelectionMode"
+            :selected-ids="selectedIds"
             @select="handleSelectMedia"
+            @longpress="handleLongPressMedia"
+            @toggle-select="handleToggleSelectMedia"
           />
         </div>
       </section>
     </main>
 
-    <!-- FLOATING BOTTOM NAVIGATION DOCK (Sticky, Centered, No Overlap) -->
+    <!-- FLOATING BOTTOM NAVIGATION DOCK (Sticky, Centered, Hidden in Selection Mode) -->
     <FloatingBottomNav
+      v-if="!isSelectionMode"
       v-model="activeTab"
       :favorite-count="favoriteCount"
       @upload-files="fabRef?.triggerFileInput()"
       @upload-folder="fabRef?.triggerFolderInput()"
       @create-folder="handleOpenCreateFolder"
     />
+
+    <!-- MULTI-SELECT FLOATING ACTION DOCK -->
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 translate-y-6 scale-95"
+      enter-to-class="opacity-100 translate-y-0 scale-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 translate-y-0 scale-100"
+      leave-to-class="opacity-0 translate-y-6 scale-95"
+    >
+      <div
+        v-if="isSelectionMode"
+        class="fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] sm:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-[440px] sm:max-w-lg px-3 select-none"
+      >
+        <div class="p-2 sm:p-2.5 rounded-3xl bg-surface/95 dark:bg-[#20151C]/95 backdrop-blur-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/10 flex items-center justify-between gap-1 sm:gap-2">
+          <!-- Left Info & Select All & Cancel -->
+          <div class="flex items-center gap-1.5 sm:gap-2 pl-1.5 min-w-0">
+            <button
+              type="button"
+              class="w-9 h-9 rounded-full bg-surface-tint hover:bg-black/10 dark:hover:bg-white/10 flex items-center justify-center text-muted hover:text-app transition-colors cursor-pointer shrink-0"
+              title="Batal Memilih"
+              aria-label="Batal Memilih"
+              @click="handleCancelSelection"
+            >
+              <X class="w-4 h-4" />
+            </button>
+
+            <div class="flex flex-col min-w-0">
+              <span class="text-xs sm:text-sm font-bold text-app leading-tight truncate">
+                {{ selectedIds.size }} Dipilih
+              </span>
+              <button
+                type="button"
+                class="text-[10px] text-[#C93D68] dark:text-[#FF8FAE] font-semibold hover:underline text-left cursor-pointer truncate"
+                @click="handleToggleSelectAll"
+              >
+                {{ isAllSelected ? 'Batal Semua' : 'Pilih Semua' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Action Buttons (Unduh, Pindah, Hapus) -->
+          <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <!-- Download Button -->
+            <button
+              type="button"
+              class="h-10 px-2.5 sm:px-3 rounded-2xl bg-surface-tint hover:bg-[#C93D68]/10 text-app flex items-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              :disabled="selectedIds.size === 0 || isDownloadingBatch"
+              @click="handleBatchDownload"
+              title="Unduh file terpilih"
+            >
+              <Download class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
+              <span class="hidden xs:inline">Unduh</span>
+            </button>
+
+            <!-- Move to Folder Button -->
+            <button
+              type="button"
+              class="h-10 px-2.5 sm:px-3 rounded-2xl bg-surface-tint hover:bg-[#C93D68]/10 text-app flex items-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              :disabled="selectedIds.size === 0 || isBatchMoving"
+              @click="isBatchMoveOpen = true"
+              title="Pindahkan ke folder lain"
+            >
+              <FolderInput class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
+              <span class="hidden xs:inline">Pindah</span>
+            </button>
+
+            <!-- Delete Button -->
+            <button
+              type="button"
+              class="h-10 px-2.5 sm:px-3 rounded-2xl bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 flex items-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              :disabled="selectedIds.size === 0 || isBatchDeleting"
+              @click="isBatchDeleteOpen = true"
+              title="Hapus file terpilih"
+            >
+              <Trash2 class="w-4 h-4 shrink-0" />
+              <span class="hidden xs:inline">Hapus</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Upload Hidden Inputs & Drag Overlay (Main FAB hidden since integrated in bottom dock) -->
     <UploadFAB
@@ -633,6 +858,30 @@ onMounted(async () => {
       :is-loading="isDeletingFolder"
       @confirm="confirmDeleteFolder"
       @cancel="isDeleteConfirmOpen = false"
+    />
+
+    <!-- Batch Move to Folder Modal -->
+    <MoveToFolderModal
+      :is-open="isBatchMoveOpen"
+      :current-folder-id="folderStore.currentFolder?.id || null"
+      :is-loading="isBatchMoving"
+      :title="`Pindahkan ${selectedIds.size} Kenangan`"
+      description="Pilih folder tujuan untuk semua file yang dipilih"
+      @move="handleConfirmBatchMove"
+      @close="isBatchMoveOpen = false"
+    />
+
+    <!-- Batch Delete Confirm Dialog -->
+    <ConfirmDialog
+      :is-open="isBatchDeleteOpen"
+      :title="`Hapus ${selectedIds.size} Kenangan Terpilih?`"
+      message="Foto atau video yang dihapus tidak dapat dipulihkan kembali dari penyimpanan cloud."
+      confirm-text="Ya, Hapus Semua"
+      cancel-text="Batal"
+      variant="danger"
+      :is-loading="isBatchDeleting"
+      @confirm="handleConfirmBatchDelete"
+      @cancel="isBatchDeleteOpen = false"
     />
   </div>
 </template>

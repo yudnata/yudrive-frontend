@@ -5,11 +5,19 @@ import GalleryItemCard from './GalleryItemCard.vue';
 interface Props {
   dateLabel: string;
   items: MediaItem[];
+  isSelectionMode?: boolean;
+  selectedIds?: Set<string>;
 }
 
-defineProps<Props>();
+withDefaults(defineProps<Props>(), {
+  isSelectionMode: false,
+  selectedIds: () => new Set<string>(),
+});
+
 defineEmits<{
   (e: 'select', item: MediaItem): void;
+  (e: 'longpress', item: MediaItem): void;
+  (e: 'toggleSelect', item: MediaItem): void;
 }>();
 </script>
 
@@ -26,8 +34,13 @@ defineEmits<{
         v-for="item in items"
         :key="item.id"
         :item="item"
+        :is-selection-mode="isSelectionMode"
+        :is-selected="selectedIds.has(item.id)"
         @click="$emit('select', $event)"
+        @longpress="$emit('longpress', $event)"
+        @toggle-select="$emit('toggleSelect', $event)"
       />
     </div>
   </section>
 </template>
+
