@@ -1024,32 +1024,6 @@ onMounted(async () => {
           </button>
         </div>
 
-        <!-- Filter Summary Bar if filters are active -->
-        <div
-          v-if="hasActiveGalleryFilters"
-          class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-surface-tint text-xs text-app flex-wrap gap-2"
-        >
-          <div class="flex items-center gap-2 flex-wrap text-muted">
-            <span>Filter aktif:</span>
-            <span v-if="galleryStore.searchQuery" class="font-semibold text-app px-2 py-0.5 rounded-lg bg-surface shadow-soft-xs">
-              "{{ galleryStore.searchQuery }}"
-            </span>
-            <span v-if="galleryStore.mediaTypeFilter !== 'all'" class="font-semibold text-app px-2 py-0.5 rounded-lg bg-surface shadow-soft-xs capitalize">
-              Tipe: {{ galleryStore.mediaTypeFilter === 'photo' ? 'Foto' : 'Video' }}
-            </span>
-            <span class="text-[11px] text-[#C93D68] dark:text-[#FF8FAE] font-bold">
-              ({{ galleryStore.filteredItems.length }} kenangan ditemukan)
-            </span>
-          </div>
-
-          <button
-            type="button"
-            class="text-[11px] font-semibold text-[#C93D68] dark:text-[#FF8FAE] hover:underline cursor-pointer shrink-0 ml-auto"
-            @click="handleResetGalleryFilters"
-          >
-            Reset Semua
-          </button>
-        </div>
 
         <!-- Loading Spinner -->
         <div
