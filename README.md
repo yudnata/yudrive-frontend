@@ -1,10 +1,10 @@
-# Our Memories — Frontend Web App
+# Our Memories - Frontend Web App
 
 Aplikasi web privat Vue 3 + Vite + TypeScript untuk Our Memories.
 
 ## Fitur Utama
 - **Desain "Soft Romantic Minimal"**: Menggunakan token CSS variables, palet lembut pinky-white modern, dan kontras teruji WCAG AA.
-- **Tipografi Elegan**: Headings dengan *Fraunces* (serif) dan antarmuka dengan *Plus Jakarta Sans*.
+- **Tipografi Elegan**: Headings dengan *Fraunces* (serif) dan antarmuka dengan *Quicksand* (rounded sans-serif).
 - **Mobile First**: Target sentuh terstandarisasi (>= 44x44px), tanpa horizontal overflow, responsif dari HP hingga layar lebar.
 - **Zero-Byte Server Upload**: Upload dan stream langsung ke Cloudflare R2 melalui Presigned URL S3.
 - **Dukungan Format Modern**: Integrasi heic2any untuk thumbnail format iPhone (.heic) dan exifr untuk ekstraksi tanggal foto.

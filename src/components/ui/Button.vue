@@ -22,7 +22,7 @@ const variantClasses = computed(() => {
     case 'primary':
       return 'btn-primary shadow-soft-sm';
     case 'secondary':
-      return 'bg-surface text-app border border-app hover:bg-surface-tint active:bg-surface-tint';
+      return 'bg-surface text-app shadow-soft-sm hover:shadow hover:bg-surface-tint active:bg-surface-tint';
     case 'ghost':
       return 'bg-transparent text-app hover:bg-surface-tint active:bg-surface-tint';
     case 'danger':

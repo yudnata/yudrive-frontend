@@ -8,9 +8,8 @@ defineEmits<{
 
 <template>
   <div class="py-16 sm:py-24 px-4 text-center max-w-sm mx-auto flex flex-col items-center">
-    <div class="w-16 h-16 rounded-full bg-surface-tint border border-app flex items-center justify-center text-[#E0527A] mb-5">
-      <Heart class="w-8 h-8 fill-current" />
-    </div>
+    <!-- Bare Heart Icon (No background container) -->
+    <Heart class="w-16 h-16 text-[#E0527A] dark:text-[#FF8FAE] mb-4 fill-current drop-shadow-sm" />
 
     <h3 class="text-xl font-serif font-semibold text-app mb-2">
       Belum Ada Kenangan

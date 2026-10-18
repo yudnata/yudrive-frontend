@@ -1,0 +1,279 @@
+<script setup lang="ts">
+import { ref, computed } from 'vue';
+import { Folder as FolderType } from '@/types';
+import {
+  Folder as FolderIcon,
+  Info,
+  Edit2,
+  Trash2,
+  X,
+  Heart,
+  Calendar,
+} from 'lucide-vue-next';
+import { formatEventDate } from '@/utils/date';
+
+const props = defineProps<{
+  folder: FolderType;
+  indexNumber?: number;
+}>();
+
+const emit = defineEmits<{
+  (e: 'select', folder: FolderType): void;
+  (e: 'info', folder: FolderType): void;
+  (e: 'rename', folder: FolderType): void;
+  (e: 'delete', folder: FolderType): void;
+}>();
+
+const isMenuOpen = ref(false);
+const isPressing = ref(false);
+let pressTimer: ReturnType<typeof setTimeout> | null = null;
+let isLongPressTriggered = false;
+
+function startPress() {
+  isLongPressTriggered = false;
+  isPressing.value = true;
+  pressTimer = setTimeout(() => {
+    isLongPressTriggered = true;
+    isPressing.value = false;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    } catch {
+      // Haptics fallback
+    }
+    isMenuOpen.value = true;
+  }, 500);
+}
+
+function cancelPress() {
+  isPressing.value = false;
+  if (pressTimer) {
+    clearTimeout(pressTimer);
+    pressTimer = null;
+  }
+}
+
+function handleClick() {
+  if (isLongPressTriggered) {
+    isLongPressTriggered = false;
+    return;
+  }
+  emit('select', props.folder);
+}
+
+function closeMenu() {
+  isMenuOpen.value = false;
+  isPressing.value = false;
+  isLongPressTriggered = false;
+}
+
+function onAction(action: 'info' | 'rename' | 'delete') {
+  closeMenu();
+  if (action === 'info') emit('info', props.folder);
+  else if (action === 'rename') emit('rename', props.folder);
+  else if (action === 'delete') emit('delete', props.folder);
+}
+
+function formatFolderDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return formatEventDate(dateStr);
+  }
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(d);
+    }
+  } catch {
+    // fallback
+  }
+  return '';
+}
+
+const displayDate = computed(() => {
+  if (props.folder.eventDate) {
+    return formatFolderDate(props.folder.eventDate);
+  }
+  if (props.folder.createdAt) {
+    return formatFolderDate(props.folder.createdAt);
+  }
+  return '';
+});
+</script>
+
+<template>
+  <div
+    class="relative group transition-all duration-300 cursor-pointer flex flex-col select-none"
+    :class="[
+      isMenuOpen || isPressing
+        ? 'scale-[1.04] z-20'
+        : 'hover:scale-[1.02]'
+    ]"
+    @touchstart.passive="startPress"
+    @touchend="cancelPress"
+    @touchmove="cancelPress"
+    @touchcancel="cancelPress"
+    @mousedown="startPress"
+    @mouseup="cancelPress"
+    @mouseleave="cancelPress"
+    @contextmenu.prevent
+    @click="handleClick"
+  >
+    <!-- AUTHENTIC FOLDER CARD DESIGN -->
+    <div
+      class="relative w-full flex flex-col transition-all duration-300"
+      :class="isMenuOpen || isPressing ? 'drop-shadow-xl' : 'drop-shadow-sm group-hover:drop-shadow-md'"
+    >
+      <!-- 1. FOLDER TAB (Top-left tab shaped like a real physical file folder) -->
+      <div class="flex items-end pl-2 -mb-px relative z-10">
+        <!-- Tab Base with Index Number -->
+        <div
+          class="h-6 sm:h-7 px-3.5 rounded-t-xl bg-[#FFD6E3] dark:bg-[#3D202F] flex items-center gap-1 text-[11px] font-bold text-[#C93D68] dark:text-[#FF8FAE] border-t border-l border-[#FFCCD9] dark:border-white/10 shadow-xs"
+        >
+          <span class="text-[9px] opacity-75">#</span>
+          <span>{{ indexNumber !== undefined ? indexNumber : '1' }}</span>
+        </div>
+
+        <!-- Smooth Tab Shoulder Curve connecting Tab to Folder Body -->
+        <svg class="h-4 w-4 text-[#FFD6E3] dark:text-[#3D202F] -ml-px fill-current shrink-0" viewBox="0 0 16 16">
+          <path d="M0,0 Q6,0 10,8 Q13,16 16,16 L0,16 Z" />
+        </svg>
+      </div>
+
+      <!-- 2. FOLDER BODY (Tabbed silhouette with cover photo or cute folder pocket interior) -->
+      <div
+        class="relative w-full aspect-4/3 rounded-2xl rounded-tl-none overflow-hidden bg-linear-to-b from-[#FFD6E3] via-[#FFEBF1] to-[#FFE0EA] dark:from-[#3D202F] dark:via-[#2F1724] dark:to-[#25121C] border border-[#FFCCD9]/80 dark:border-white/10 shadow-xs"
+      >
+        <!-- A. When Folder has Cover Photo -->
+        <template v-if="folder.coverUrl">
+          <img
+            :src="folder.coverUrl"
+            :alt="folder.name"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
+        </template>
+
+        <!-- B. When Folder is Empty / No Cover: Cute Skeuomorphic Stationery Folder Interior -->
+        <template v-else>
+          <!-- Peeking document / photo paper sheet inside the folder -->
+          <div class="absolute top-2 inset-x-3.5 h-16 rounded-t-xl bg-white/90 dark:bg-white/10 shadow-xs border border-white/60 dark:border-white/5 flex flex-col justify-center px-3 gap-1.5 transition-transform duration-300 group-hover:-translate-y-1">
+            <div class="w-16 h-1.5 rounded-full bg-[#FFCCD9]/70 dark:bg-white/20" />
+            <div class="w-10 h-1.5 rounded-full bg-[#FFCCD9]/50 dark:bg-white/10" />
+            <Heart class="w-3.5 h-3.5 text-[#FF8FAE]/50 fill-current absolute right-3 top-3" />
+          </div>
+
+          <!-- Front Pocket Flap -->
+          <div class="absolute bottom-0 inset-x-0 h-14 bg-linear-to-t from-[#FFB8CC] to-[#FFD6E3] dark:from-[#361A28] dark:to-[#452234] border-t border-white/40 dark:border-white/10 shadow-sm" />
+        </template>
+
+        <!-- C. BOTTOM OVERLAY: White text with deep shadow & gradient scrim for 100% readability even on pure white covers -->
+        <div class="absolute inset-x-0 bottom-0 pt-10 pb-2 sm:pb-2.5 px-2.5 sm:px-3 bg-linear-to-t from-black/90 via-black/55 to-transparent flex flex-col justify-end pointer-events-none">
+          <h3 class="text-xs sm:text-sm font-bold text-white truncate tracking-tight drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]">
+            {{ folder.name }}
+          </h3>
+          <p
+            v-if="displayDate"
+            class="text-[10px] sm:text-[11px] text-white/85 font-medium truncate mt-0.5 flex items-center gap-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+          >
+            <Calendar class="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0 opacity-80" />
+            <span>{{ displayDate }}</span>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Long-Press Action Modal / Sheet -->
+    <Teleport to="body">
+      <div
+        v-if="isMenuOpen"
+        class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/60 backdrop-blur-xs select-none"
+        role="dialog"
+        aria-modal="true"
+        @click="closeMenu"
+      >
+        <div
+          class="w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl bg-surface p-5 text-left shadow-2xl ring-1 ring-black/5 dark:ring-white/10 transform transition-all"
+          @click.stop
+        >
+          <!-- Header with Folder Name & Sequential Index -->
+          <div class="flex items-center justify-between pb-3.5 border-b border-black/5 dark:border-white/10">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-9 h-9 rounded-xl bg-[#C93D68]/10 dark:bg-[#FF8FAE]/10 text-[#C93D68] dark:text-[#FF8FAE] flex items-center justify-center shrink-0">
+                <FolderIcon class="w-5 h-5 fill-current" />
+              </div>
+              <div class="min-w-0">
+                <h3 class="text-sm font-bold text-app truncate">
+                  {{ indexNumber !== undefined ? `#${indexNumber} ` : '' }}{{ folder.name }}
+                </h3>
+                <p v-if="folder.itemCount > 0" class="text-[11px] text-muted truncate mt-0.5">
+                  {{ folder.itemCount }} kenangan tersimpan
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-app hover:bg-surface-tint transition-colors cursor-pointer"
+              aria-label="Tutup menu"
+              @click="closeMenu"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <!-- Actions List -->
+          <div class="py-2.5 space-y-1.5">
+            <button
+              type="button"
+              class="w-full px-3.5 py-3 rounded-2xl flex items-center gap-3 text-app hover:bg-surface-tint transition-all cursor-pointer text-xs font-semibold"
+              @click="onAction('info')"
+            >
+              <div class="w-8 h-8 rounded-xl bg-surface-tint flex items-center justify-center text-muted shrink-0">
+                <Info class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
+              </div>
+              <span>Informasi & Cover</span>
+            </button>
+
+            <button
+              type="button"
+              class="w-full px-3.5 py-3 rounded-2xl flex items-center gap-3 text-app hover:bg-surface-tint transition-all cursor-pointer text-xs font-semibold"
+              @click="onAction('rename')"
+            >
+              <div class="w-8 h-8 rounded-xl bg-surface-tint flex items-center justify-center text-muted shrink-0">
+                <Edit2 class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
+              </div>
+              <span>Ubah Nama</span>
+            </button>
+
+            <div class="my-1 border-t border-black/5 dark:border-white/10" />
+
+            <button
+              type="button"
+              class="w-full px-3.5 py-3 rounded-2xl flex items-center gap-3 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-all cursor-pointer text-xs font-semibold"
+              @click="onAction('delete')"
+            >
+              <div class="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
+                <Trash2 class="w-4 h-4" />
+              </div>
+              <span>Hapus Folder</span>
+            </button>
+          </div>
+
+          <!-- Close Button -->
+          <button
+            type="button"
+            class="w-full mt-1 py-2.5 rounded-2xl bg-surface-tint text-muted hover:text-app text-xs font-semibold transition-colors cursor-pointer"
+            @click="closeMenu"
+          >
+            Tutup
+          </button>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
