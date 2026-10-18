@@ -8,12 +8,15 @@ import GalleryDateGroup from '../components/GalleryDateGroup.vue';
 import GalleryEmptyState from '../components/GalleryEmptyState.vue';
 import UploadFAB from '@/features/upload/components/UploadFAB.vue';
 import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
+import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
+import { useViewerStore } from '@/features/viewer/stores/viewer.store';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import { MediaItem } from '@/types';
 import { Heart, Coffee } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
+const viewerStore = useViewerStore();
 
 const sentinelRef = ref<HTMLElement | null>(null);
 const fabRef = ref<InstanceType<typeof UploadFAB> | null>(null);
@@ -30,8 +33,7 @@ useIntersectionObserver(
 );
 
 function handleSelectMedia(item: MediaItem) {
-  // Connected to Lightbox/Viewer in Fase 4
-  console.log('Selected media:', item.id);
+  viewerStore.open(item.id);
 }
 
 function handleEmptyUpload() {
@@ -111,6 +113,9 @@ onMounted(async () => {
     <!-- Upload Controls -->
     <UploadFAB ref="fabRef" />
     <UploadQueuePanel />
+
+    <!-- Lightbox / Fullscreen Viewer -->
+    <MediaLightbox />
 
     <!-- Footer -->
     <footer class="py-6 text-center text-xs text-muted border-t border-app mt-auto">
