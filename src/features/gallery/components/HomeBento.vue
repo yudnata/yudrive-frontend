@@ -51,35 +51,126 @@ const allMedia = computed(() => {
   return list;
 });
 
-// Shuffled randomized selection for bento slots
-const bentoItems = computed(() => {
+// Diverse randomized selection for 11 bento slots:
+// Guarantees maximum folder variety — slots prioritize different folders first,
+// preventing any single folder from flooding the grid.
+const bentoSelection = computed<MediaItem[]>(() => {
   // Trigger re-computation on seed change
   void seed.value;
-  const items = [...allMedia.value];
-  if (items.length <= 1) return items;
 
-  // Fisher-Yates shuffle
-  for (let i = items.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [items[i], items[j]] = [items[j], items[i]];
+  const pool = [...allMedia.value];
+  if (pool.length === 0) return [];
+  if (pool.length <= 11) return pool;
+
+  // Group items by folder ID (or '__unfiled__')
+  const folderGroups = new Map<string, MediaItem[]>();
+  for (const item of pool) {
+    const key = item.folderId || '__unfiled__';
+    if (!folderGroups.has(key)) {
+      folderGroups.set(key, []);
+    }
+    folderGroups.get(key)!.push(item);
   }
-  return items;
+
+  // Shuffle the items within each folder group
+  for (const list of folderGroups.values()) {
+    for (let i = list.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+  }
+
+  // Randomize the order of folders so different folders take the Hero (Slot 0) every time
+  const folderKeys = Array.from(folderGroups.keys());
+  for (let i = folderKeys.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [folderKeys[i], folderKeys[j]] = [folderKeys[j], folderKeys[i]];
+  }
+
+  const selected: MediaItem[] = [];
+  const folderPointers = new Map<string, number>();
+  for (const key of folderKeys) {
+    folderPointers.set(key, 0);
+  }
+
+  // Round-robin distribution:
+  // Round 1: Take 1 item from each folder (guarantees up to N different folders!)
+  // Round 2+: If more items needed to reach 11, take from different folders, ensuring no two adjacent slots share the same folder
+  while (selected.length < 11) {
+    let addedInPass = false;
+
+    for (const key of folderKeys) {
+      if (selected.length >= 11) break;
+
+      const list = folderGroups.get(key)!;
+      const ptr = folderPointers.get(key)!;
+
+      if (ptr < list.length) {
+        const candidate = list[ptr];
+        // Avoid consecutive items from the same folder
+        const lastItem = selected[selected.length - 1];
+        if (lastItem && (lastItem.folderId || '__unfiled__') === key && folderKeys.length > 1) {
+          continue;
+        }
+
+        selected.push(candidate);
+        folderPointers.set(key, ptr + 1);
+        addedInPass = true;
+      }
+    }
+
+    if (!addedInPass) {
+      // Fallback pass: append remaining available photos
+      for (const key of folderKeys) {
+        if (selected.length >= 11) break;
+        const list = folderGroups.get(key)!;
+        const ptr = folderPointers.get(key)!;
+        if (ptr < list.length) {
+          selected.push(list[ptr]);
+          folderPointers.set(key, ptr + 1);
+          addedInPass = true;
+        }
+      }
+      if (!addedInPass) break;
+    }
+  }
+
+  return selected;
 });
 
-// Specific slots for the bento layout
-const heroItem = computed(() => bentoItems.value[0] || null);
-const tallItem = computed(() => bentoItems.value[1] || null);
-const wideItem = computed(() => bentoItems.value[2] || null);
-const tile1 = computed(() => bentoItems.value[3] || null);
-const tile2 = computed(() => bentoItems.value[4] || null);
-const tile3 = computed(() => bentoItems.value[5] || null);
+// Slot layout configuration for the 11-item seamless bento grid (zero white space)
+// Mobile has dynamic vertical 2-slot (1x2) cards, stacked 1x1 cards, and wide cards for an authentic Bento rhythm
+const slotClasses = [
+  'col-span-2 row-span-2 md:col-span-2 md:row-span-2', // 0: Hero 2x2
+  'col-span-1 row-span-2 md:col-span-1 md:row-span-2', // 1: Tall vertical 2-slot on mobile & desktop
+  'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 2: 1x1 Square
+  'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 3: 1x1 Square
+  'col-span-1 row-span-1 md:col-span-2 md:row-span-1', // 4: Square on mobile, Wide on desktop
+  'col-span-1 row-span-2 md:col-span-1 md:row-span-1', // 5: Tall vertical 2-slot on mobile, Square on desktop
+  'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 6: 1x1 Square
+  'col-span-2 row-span-1 md:col-span-1 md:row-span-1', // 7: Wide panoramic card on mobile, Square on desktop
+  'col-span-1 row-span-2 md:col-span-1 md:row-span-1', // 8: Tall vertical 2-slot on mobile, Square on desktop
+  'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 9: 1x1 Square
+  'col-span-1 row-span-1 md:col-span-1 md:row-span-1', // 10: 1x1 Square
+];
 
-function shuffleBento() {
+async function shuffleBento() {
+  if (isShuffling.value) return;
   isShuffling.value = true;
   seed.value++;
-  setTimeout(() => {
-    isShuffling.value = false;
-  }, 400);
+
+  try {
+    const res = await apiFetch<{ items: MediaItem[] }>('/media/random?limitPerFolder=3&limit=60');
+    if (res?.items && res.items.length > 0) {
+      poolMedia.value = res.items;
+    }
+  } catch {
+    // fallback keeps existing pool, seed will re-shuffle locally
+  } finally {
+    setTimeout(() => {
+      isShuffling.value = false;
+    }, 350);
+  }
 }
 
 function getFolderName(folderId?: string | null): string {
@@ -114,7 +205,9 @@ function formatDate(iso?: string): string {
 onMounted(async () => {
   try {
     const [mediaRes, foldersRes] = await Promise.all([
-      apiFetch<{ items: MediaItem[] }>('/media?limit=50').catch(() => ({ items: [] })),
+      apiFetch<{ items: MediaItem[] }>('/media/random?limitPerFolder=3&limit=60')
+        .catch(() => apiFetch<{ items: MediaItem[] }>('/media?limit=50'))
+        .catch(() => ({ items: [] })),
       apiFetch<{ folders: FolderType[] }>('/folders?all=true').catch(() => ({ folders: [] })),
     ]);
     if (mediaRes?.items) poolMedia.value = mediaRes.items;
@@ -166,194 +259,106 @@ onMounted(async () => {
       </p>
     </div>
 
-    <!-- BENTO GRID CONTAINER -->
+    <!-- BENTO GRID (Seamless zero-whitespace responsive grid) -->
     <div
-      v-else
-      class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-40 sm:auto-rows-45"
+      v-else-if="bentoSelection.length >= 11"
+      class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-35 sm:auto-rows-38.75 md:auto-rows-42.5 lg:auto-rows-46.25 grid-flow-dense"
     >
-      <!-- 1. HERO CARD (Large 2x2 Feature Card) -->
       <div
-        v-if="heroItem"
-        class="group relative col-span-2 row-span-2 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
-        @click="$emit('selectMedia', heroItem)"
+        v-for="(item, index) in bentoSelection"
+        :key="item.id"
+        class="group relative rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
+        :class="slotClasses[index]"
+        @click="$emit('selectMedia', item)"
       >
         <img
-          :src="heroItem.thumbUrl || ''"
-          :alt="getFolderName(heroItem.folderId)"
+          :src="item.thumbUrl || ''"
+          :alt="getFolderName(item.folderId)"
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
 
         <!-- Soft Vignette Gradient -->
-        <div class="absolute inset-0 bg-linear-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+        <div class="absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
 
-        <!-- Top Badge -->
-        <div class="absolute top-3.5 left-3.5 z-10">
-          <span class="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5">
+        <!-- Top Badge for Hero Card -->
+        <div v-if="index === 0" class="absolute top-3.5 left-3.5 z-10">
+          <span class="px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md text-white text-[11px] font-semibold flex items-center gap-1.5 shadow-xs">
             <Heart class="w-3 h-3 text-[#FF8FAE] fill-current" />
             <span>Momen Pilihan</span>
           </span>
         </div>
 
-        <!-- Video badge if video -->
+        <!-- Video Badge -->
         <div
-          v-if="heroItem.type === 'video'"
-          class="absolute top-3.5 right-3.5 w-8 h-8 rounded-full bg-black/50 backdrop-blur-md text-white flex items-center justify-center z-10"
+          v-if="item.type === 'video'"
+          class="absolute top-3 right-3 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center z-10"
         >
-          <Play class="w-4 h-4 fill-current ml-0.5" />
+          <Play class="w-3.5 h-3.5 fill-current ml-0.5" />
         </div>
 
-        <!-- Bottom Info -->
-        <div class="absolute bottom-3.5 left-3.5 right-3.5 z-10 flex items-end justify-between gap-2">
-          <div class="overflow-hidden">
-            <button
-              type="button"
-              class="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer mb-1.5 max-w-full truncate"
-              @click="handleFolderClick(heroItem.folderId, $event)"
-            >
-              <FolderIcon class="w-3 h-3 text-[#FF8FAE] shrink-0 fill-current" />
-              <span class="truncate">{{ getFolderName(heroItem.folderId) }}</span>
-            </button>
-            <p v-if="heroItem.takenAt" class="text-white/80 text-xs flex items-center gap-1 drop-shadow-sm">
-              <Calendar class="w-3 h-3 shrink-0" />
-              <span>{{ formatDate(heroItem.takenAt) }}</span>
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <!-- 2. COUPLE STORY / STATS CARD (Playful Bento Card inspired by reference) -->
-      <div class="col-span-2 sm:col-span-1 row-span-1 rounded-3xl bg-linear-to-tr from-[#FFCCD5] via-[#FFF0F4] to-[#FFE6ED] dark:from-[#2A1D24] dark:via-[#35242D] dark:to-[#4A2635] p-4 flex flex-col justify-between shadow-soft-sm">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold tracking-widest uppercase text-[#C93D68] dark:text-[#FF8FAE]">
-            Kenangan Kita
-          </span>
-          <Heart class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] fill-current animate-pulse" />
-        </div>
-
-        <div>
-          <h3 class="text-base sm:text-lg font-bold text-app leading-snug">
-            Yudhi & Wina
-          </h3>
-          <p class="text-[11px] text-muted mt-0.5">
-            {{ allMedia.length }} kenangan tersimpan rapi
+        <!-- Bottom Overlay Info -->
+        <div class="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 z-10">
+          <button
+            type="button"
+            class="px-2 py-0.5 sm:py-1 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-md text-white text-[10px] sm:text-[11px] font-medium flex items-center gap-1.5 transition-colors cursor-pointer max-w-full truncate"
+            @click.stop="handleFolderClick(item.folderId, $event)"
+          >
+            <FolderIcon class="w-3 h-3 text-[#FF8FAE] shrink-0 fill-current" />
+            <span class="truncate">{{ getFolderName(item.folderId) }}</span>
+          </button>
+          <p
+            v-if="(item.takenAt || item.createdAt) && [0, 1, 4, 5, 7, 8].includes(index)"
+            class="text-white/80 text-[10px] sm:text-[11px] flex items-center gap-1 drop-shadow-sm mt-1"
+          >
+            <Calendar class="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
+            <span>{{ formatDate(item.takenAt || item.createdAt) }}</span>
           </p>
         </div>
-
-        <button
-          type="button"
-          class="self-start text-[11px] font-semibold text-[#C93D68] dark:text-[#FF8FAE] hover:underline flex items-center gap-1 cursor-pointer"
-          @click="$emit('exploreFolders')"
-        >
-          <span>Jelajah Semua Folder</span>
-          <span>→</span>
-        </button>
       </div>
+    </div>
 
-      <!-- 3. TALL PORTRAIT CARD (1 col, 2 rows) -->
+    <!-- Fallback Grid if fewer than 11 items -->
+    <div
+      v-else
+      class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 auto-rows-35 sm:auto-rows-40 md:auto-rows-43.75"
+    >
       <div
-        v-if="tallItem"
-        class="group relative col-span-1 row-span-2 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
-        @click="$emit('selectMedia', tallItem)"
+        v-for="item in allMedia"
+        :key="item.id"
+        class="group relative col-span-1 row-span-1 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
+        @click="$emit('selectMedia', item)"
       >
         <img
-          :src="tallItem.thumbUrl || ''"
-          :alt="getFolderName(tallItem.folderId)"
+          :src="item.thumbUrl || ''"
+          :alt="getFolderName(item.folderId)"
           class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
-        <div class="absolute inset-0 bg-linear-to-t from-black/75 via-transparent to-transparent pointer-events-none" />
-
-        <div class="absolute bottom-3 left-3 right-3 z-10">
+        <div class="absolute inset-0 bg-linear-to-t from-black/75 via-black/20 to-transparent pointer-events-none" />
+        <div v-if="item.type === 'video'" class="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center z-10">
+          <Play class="w-3.5 h-3.5 fill-current ml-0.5" />
+        </div>
+        <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
           <span class="text-white text-[11px] font-semibold drop-shadow-sm truncate block">
-            {{ getFolderName(tallItem.folderId) }}
+            {{ getFolderName(item.folderId) }}
           </span>
         </div>
       </div>
+    </div>
 
-      <!-- 4. WIDE CARD (2 cols, 1 row on desktop / responsive) -->
-      <div
-        v-if="wideItem"
-        class="group relative col-span-2 sm:col-span-1 md:col-span-2 row-span-1 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
-        @click="$emit('selectMedia', wideItem)"
+    <!-- Explore Folders Quick Action Pill -->
+    <div class="flex items-center justify-center pt-2">
+      <button
+        type="button"
+        class="px-5 py-2.5 rounded-full bg-surface shadow-soft-sm hover:shadow-soft text-app text-xs font-semibold hover:bg-surface-tint active:scale-95 transition-all flex items-center gap-2 cursor-pointer"
+        aria-label="Jelajahi semua folder kenangan"
+        @click="$emit('exploreFolders')"
       >
-        <img
-          :src="wideItem.thumbUrl || ''"
-          :alt="getFolderName(wideItem.folderId)"
-          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-          loading="lazy"
-        />
-        <div class="absolute inset-0 bg-linear-to-t from-black/70 via-transparent to-transparent pointer-events-none" />
-
-        <div class="absolute bottom-3 left-3 right-3 z-10 flex items-center justify-between">
-          <span class="text-white text-xs font-semibold drop-shadow-sm truncate">
-            {{ getFolderName(wideItem.folderId) }}
-          </span>
-          <span v-if="wideItem.type === 'video'" class="w-6 h-6 rounded-full bg-black/40 backdrop-blur-md text-white flex items-center justify-center shrink-0">
-            <Play class="w-3 h-3 fill-current ml-0.5" />
-          </span>
-        </div>
-      </div>
-
-      <!-- 5. MINI TILE 1 (Square) -->
-      <div
-        v-if="tile1"
-        class="group relative col-span-1 row-span-1 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
-        @click="$emit('selectMedia', tile1)"
-      >
-        <img
-          :src="tile1.thumbUrl || ''"
-          :alt="getFolderName(tile1.folderId)"
-          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-        <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
-          <p class="text-white text-[10px] font-semibold truncate drop-shadow-sm">
-            {{ getFolderName(tile1.folderId) }}
-          </p>
-        </div>
-      </div>
-
-      <!-- 6. MINI TILE 2 (Square) -->
-      <div
-        v-if="tile2"
-        class="group relative col-span-1 row-span-1 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
-        @click="$emit('selectMedia', tile2)"
-      >
-        <img
-          :src="tile2.thumbUrl || ''"
-          :alt="getFolderName(tile2.folderId)"
-          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-        <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
-          <p class="text-white text-[10px] font-semibold truncate drop-shadow-sm">
-            {{ getFolderName(tile2.folderId) }}
-          </p>
-        </div>
-      </div>
-
-      <!-- 7. MINI TILE 3 or Quick Folder Action (Square) -->
-      <div
-        v-if="tile3"
-        class="group relative col-span-1 row-span-1 rounded-3xl overflow-hidden shadow-soft cursor-pointer bg-surface-tint"
-        @click="$emit('selectMedia', tile3)"
-      >
-        <img
-          :src="tile3.thumbUrl || ''"
-          :alt="getFolderName(tile3.folderId)"
-          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        <div class="absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-        <div class="absolute bottom-2.5 left-2.5 right-2.5 z-10">
-          <p class="text-white text-[10px] font-semibold truncate drop-shadow-sm">
-            {{ getFolderName(tile3.folderId) }}
-          </p>
-        </div>
-      </div>
+        <FolderIcon class="w-3.5 h-3.5 text-[#C93D68] dark:text-[#FF8FAE]" />
+        <span>Jelajahi Semua Folder Kenangan</span>
+        <span class="text-muted text-[11px]">({{ allMedia.length }})</span>
+      </button>
     </div>
   </div>
 </template>

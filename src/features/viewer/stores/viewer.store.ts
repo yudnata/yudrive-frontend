@@ -8,6 +8,7 @@ import { useToast } from '@/composables/useToast';
 
 interface CachedUrl {
   url: string;
+  thumbUrl?: string;
   mime: string;
   filename: string;
   sizeBytes: number;
@@ -18,10 +19,13 @@ export const useViewerStore = defineStore('viewer', () => {
   const isOpen = ref(false);
   const currentMediaId = ref<string | null>(null);
   const activeUrl = ref<string | null>(null);
+  const activeThumbUrl = ref<string | null>(null);
   const activeMime = ref<string | null>(null);
   const activeFilename = ref<string | null>(null);
   const isLoadingUrl = ref(false);
   const urlError = ref<string | null>(null);
+  const contextItems = ref<MediaItem[]>([]);
+  const initialActiveItem = ref<MediaItem | null>(null);
 
   // Cache presigned URLs in memory for up to 50 minutes (valid for 60 min)
   const urlCache = new Map<string, CachedUrl>();
@@ -30,17 +34,27 @@ export const useViewerStore = defineStore('viewer', () => {
   const authStore = useAuthStore();
   const toast = useToast();
 
+  const currentItems = computed<MediaItem[]>(() => {
+    return contextItems.value.length > 0 ? contextItems.value : galleryStore.items;
+  });
+
   const currentIndex = computed(() => {
     if (!currentMediaId.value) return -1;
-    return galleryStore.items.findIndex((item) => item.id === currentMediaId.value);
+    return currentItems.value.findIndex((item) => item.id === currentMediaId.value);
   });
 
   const activeItem = computed<MediaItem | null>(() => {
-    if (currentIndex.value === -1) return null;
-    return galleryStore.items[currentIndex.value] || null;
+    if (currentIndex.value !== -1 && currentItems.value[currentIndex.value]) {
+      return currentItems.value[currentIndex.value];
+    }
+    if (initialActiveItem.value && initialActiveItem.value.id === currentMediaId.value) {
+      return initialActiveItem.value;
+    }
+    return galleryStore.items.find((item) => item.id === currentMediaId.value) || null;
   });
 
-  const hasNext = computed(() => currentIndex.value < galleryStore.items.length - 1);
+  const totalItems = computed(() => currentItems.value.length);
+  const hasNext = computed(() => currentIndex.value >= 0 && currentIndex.value < currentItems.value.length - 1);
   const hasPrev = computed(() => currentIndex.value > 0);
 
   // Fetch or retrieve fresh presigned GET URL
@@ -51,6 +65,7 @@ export const useViewerStore = defineStore('viewer', () => {
     // 50 minutes = 3000000 ms
     if (!forceFresh && cached && now - cached.fetchedAt < 3000000) {
       activeUrl.value = cached.url;
+      activeThumbUrl.value = cached.thumbUrl || null;
       activeMime.value = cached.mime;
       activeFilename.value = cached.filename;
       return cached.url;
@@ -62,6 +77,7 @@ export const useViewerStore = defineStore('viewer', () => {
     try {
       const data = await apiFetch<{
         url: string;
+        thumbUrl?: string;
         mime: string;
         filename: string;
         sizeBytes: number;
@@ -73,6 +89,7 @@ export const useViewerStore = defineStore('viewer', () => {
       });
 
       activeUrl.value = data.url;
+      activeThumbUrl.value = data.thumbUrl || null;
       activeMime.value = data.mime;
       activeFilename.value = data.filename;
       return data.url;
@@ -84,11 +101,18 @@ export const useViewerStore = defineStore('viewer', () => {
     }
   }
 
-  // Open viewer with specified media item
-  async function open(mediaId: string) {
+  // Open viewer with specified media item and optional context list
+  async function open(mediaId: string, items?: MediaItem[], initialItem?: MediaItem) {
+    if (items && items.length > 0) {
+      contextItems.value = items;
+    } else {
+      contextItems.value = galleryStore.items;
+    }
+    initialActiveItem.value = initialItem || null;
     currentMediaId.value = mediaId;
     isOpen.value = true;
     activeUrl.value = null;
+    activeThumbUrl.value = initialItem?.thumbUrl || null;
     await loadMediaUrl(mediaId).catch(() => {});
   }
 
@@ -96,17 +120,21 @@ export const useViewerStore = defineStore('viewer', () => {
   function close() {
     isOpen.value = false;
     currentMediaId.value = null;
+    initialActiveItem.value = null;
     activeUrl.value = null;
+    activeThumbUrl.value = null;
     urlError.value = null;
   }
 
   // Navigate next item
   async function next() {
     if (!hasNext.value) return;
-    const nextItem = galleryStore.items[currentIndex.value + 1];
+    const nextItem = currentItems.value[currentIndex.value + 1];
     if (nextItem) {
       currentMediaId.value = nextItem.id;
+      initialActiveItem.value = nextItem;
       activeUrl.value = null;
+      activeThumbUrl.value = nextItem.thumbUrl || null;
       await loadMediaUrl(nextItem.id).catch(() => {});
     }
   }
@@ -114,10 +142,12 @@ export const useViewerStore = defineStore('viewer', () => {
   // Navigate previous item
   async function prev() {
     if (!hasPrev.value) return;
-    const prevItem = galleryStore.items[currentIndex.value - 1];
+    const prevItem = currentItems.value[currentIndex.value - 1];
     if (prevItem) {
       currentMediaId.value = prevItem.id;
+      initialActiveItem.value = prevItem;
       activeUrl.value = null;
+      activeThumbUrl.value = prevItem.thumbUrl || null;
       await loadMediaUrl(prevItem.id).catch(() => {});
     }
   }
@@ -141,18 +171,27 @@ export const useViewerStore = defineStore('viewer', () => {
 
       galleryStore.removeItem(itemToDelete.id);
       urlCache.delete(itemToDelete.id);
+
+      const ctxIdx = contextItems.value.findIndex((i) => i.id === itemToDelete.id);
+      if (ctxIdx !== -1) {
+        contextItems.value.splice(ctxIdx, 1);
+      }
+
       authStore.fetchMe().catch(() => {});
       toast.success('Kenangan berhasil dihapus.');
 
       // Adjust index or close if no items left
-      if (galleryStore.items.length === 0) {
+      const items = currentItems.value;
+      if (items.length === 0) {
         close();
-      } else if (currentIndex.value >= galleryStore.items.length) {
-        currentMediaId.value = galleryStore.items[galleryStore.items.length - 1].id;
-        loadMediaUrl(currentMediaId.value).catch(() => {});
+      } else if (currentIndex.value >= items.length) {
+        const nextId = items[items.length - 1].id;
+        currentMediaId.value = nextId;
+        loadMediaUrl(nextId).catch(() => {});
       } else {
-        currentMediaId.value = galleryStore.items[currentIndex.value].id;
-        loadMediaUrl(currentMediaId.value).catch(() => {});
+        const nextId = items[currentIndex.value].id;
+        currentMediaId.value = nextId;
+        loadMediaUrl(nextId).catch(() => {});
       }
     } catch (err: any) {
       if (err instanceof ApiError && err.statusCode === 403) {
@@ -177,7 +216,10 @@ export const useViewerStore = defineStore('viewer', () => {
     currentMediaId,
     activeItem,
     currentIndex,
+    totalItems,
+    currentItems,
     activeUrl,
+    activeThumbUrl,
     activeMime,
     activeFilename,
     isLoadingUrl,

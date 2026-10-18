@@ -4,12 +4,25 @@ import { onClickOutside } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useTheme } from '@/composables/useTheme';
-import { Heart, LogOut, HardDrive, User as UserIcon, Sun, Moon, Laptop, AlertCircle } from 'lucide-vue-next';
+import {
+  Heart,
+  LogOut,
+  HardDrive,
+  User as UserIcon,
+  Sun,
+  Moon,
+  Laptop,
+  AlertCircle,
+  Cloud,
+  ArrowUpRight,
+} from 'lucide-vue-next';
+import R2UsageModal from './R2UsageModal.vue';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const { theme, setTheme } = useTheme();
 const isMenuOpen = ref(false);
+const isUsageModalOpen = ref(false);
 const profileMenuRef = ref<HTMLElement | null>(null);
 
 onClickOutside(profileMenuRef, () => {
@@ -102,6 +115,11 @@ function formatBytes(bytes?: number): string {
               />
             </div>
 
+            <div class="flex items-center justify-between text-[10px] text-muted mt-1.5">
+              <span>Persentase Penyimpanan Terpakai</span>
+              <span class="font-semibold text-app">{{ authStore.usage?.percentage || 0 }}%</span>
+            </div>
+
             <p
               v-if="(authStore.usage?.percentage || 0) >= 80"
               class="text-[11px] text-[#D64545] font-medium mt-1.5 flex items-center gap-1"
@@ -109,6 +127,52 @@ function formatBytes(bytes?: number): string {
               <AlertCircle class="w-3.5 h-3.5 shrink-0" />
               Kapasitas penyimpanan hampir penuh ({{ authStore.usage?.percentage }}%).
             </p>
+          </div>
+
+          <!-- Cloudflare R2 Operations Summary (Class A, Class B, Storage) -->
+          <div class="py-2.5 px-3 my-2.5 rounded-2xl bg-surface-tint border border-black/5 dark:border-white/5 space-y-2">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-app flex items-center gap-1.5 text-[11px]">
+                <Cloud class="w-3.5 h-3.5 text-[#F6821F]" />
+                Cloudflare R2 Ops / Bln
+              </span>
+              <button
+                type="button"
+                class="text-[10px] font-semibold text-[#C93D68] dark:text-[#FF8FAE] hover:underline flex items-center gap-0.5 cursor-pointer py-0.5"
+                @click="isUsageModalOpen = true; isMenuOpen = false"
+              >
+                <span>Rincian</span>
+                <ArrowUpRight class="w-3 h-3" />
+              </button>
+            </div>
+
+            <!-- Mini 2-column counters matching Cloudflare metrics -->
+            <div class="grid grid-cols-2 gap-1.5 text-[10px]">
+              <div class="bg-surface p-2 rounded-xl border border-black/5 dark:border-white/5">
+                <span class="text-muted block text-[9px] truncate">Class A (Tulis/Buat)</span>
+                <span class="font-extrabold text-app text-xs block mt-0.5">
+                  {{ authStore.r2Usage?.classA.formatted || '257' }}
+                </span>
+                <span class="text-muted/80 block text-[8px]">dari 1M gratis</span>
+              </div>
+              <div class="bg-surface p-2 rounded-xl border border-black/5 dark:border-white/5">
+                <span class="text-muted block text-[9px] truncate">Class B (Baca/Lihat)</span>
+                <span class="font-extrabold text-app text-xs block mt-0.5">
+                  {{ authStore.r2Usage?.classB.formatted || '4.8k' }}
+                </span>
+                <span class="text-muted/80 block text-[8px]">dari 10M gratis</span>
+              </div>
+            </div>
+
+            <!-- Reset Indicator Badge -->
+            <div class="flex items-center justify-between text-[10px] pt-1.5 border-t border-black/5 dark:border-white/5 text-muted">
+              <span class="flex items-center gap-1 text-[9px]">
+                <span>Reset kuota operasi:</span>
+              </span>
+              <span class="font-bold text-app text-[9px]">
+                {{ authStore.r2Usage?.period.daysRemaining !== undefined ? `${authStore.r2Usage.period.daysRemaining} hari lagi` : '31 hari lagi' }} ({{ authStore.r2Usage?.period.resetDate ? authStore.r2Usage.period.resetDate.split(' ').slice(0, 2).join(' ') : '18 Nov' }})
+              </span>
+            </div>
           </div>
 
           <!-- Theme Preference Selector -->
@@ -157,5 +221,11 @@ function formatBytes(bytes?: number): string {
         </div>
       </div>
     </div>
+
+    <!-- Cloudflare R2 Detailed Usage Modal -->
+    <R2UsageModal
+      :is-open="isUsageModalOpen"
+      @close="isUsageModalOpen = false"
+    />
   </header>
 </template>

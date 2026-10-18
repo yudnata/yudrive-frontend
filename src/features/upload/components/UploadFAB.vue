@@ -84,6 +84,7 @@ function handleCreateFolderClick() {
 function handleFileSelection(e: Event) {
   const target = e.target as HTMLInputElement;
   if (target.files && target.files.length > 0) {
+    console.log('[UploadFAB] File dipilih dari picker:', target.files.length, 'file');
     uploadStore.addFiles(target.files, folderStore.currentFolder?.id);
     target.value = '';
   }
@@ -175,12 +176,12 @@ onUnmounted(() => {
     >
       <button
         type="button"
-        class="glass-nav bg-surface/95 text-app px-4 py-2 rounded-full shadow-lg text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-11 transition-all cursor-pointer ring-1 ring-black/5 dark:ring-white/10"
+        class="bg-white text-black px-4 py-2 rounded-full shadow-xl border border-black/10 text-xs font-medium flex items-center gap-2 hover:bg-gray-50 min-h-11 transition-all cursor-pointer"
         @click="uploadStore.isPanelOpen = !uploadStore.isPanelOpen"
       >
         <span
           v-if="uploadStore.activeCount > 0"
-          class="w-2 h-2 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE] animate-ping"
+          class="w-2 h-2 rounded-full bg-[#C93D68] animate-ping"
         />
         <span v-else class="w-2 h-2 rounded-full bg-[#3F9D7A]" />
         <span>{{ uploadStore.activeCount > 0 ? `${uploadStore.activeCount} Mengunggah` : 'Antrean Upload' }}</span>
@@ -208,12 +209,12 @@ onUnmounted(() => {
         >
           <!-- Option: Buat Folder Baru -->
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-surface/95 shadow-md text-xs font-semibold text-app select-none">
+            <span class="px-3 py-1.5 rounded-xl bg-white text-black font-bold text-xs shadow-xl border border-black/10 select-none">
               Buat Folder Baru
             </span>
             <button
               type="button"
-              class="w-11 h-11 rounded-full bg-surface shadow-md text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
+              class="w-11 h-11 rounded-full bg-white text-[#C93D68] shadow-xl border border-black/10 hover:bg-gray-50 flex items-center justify-center transition-all cursor-pointer"
               aria-label="Buat folder baru"
               @click="handleCreateFolderClick"
             >
@@ -222,15 +223,17 @@ onUnmounted(() => {
           </div>
 
           <!-- Option: Upload File -->
-          <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-surface/95 shadow-md text-xs font-semibold text-app select-none">
+          <div
+            class="flex items-center gap-2 group cursor-pointer"
+            @click="triggerFileInput"
+          >
+            <span class="px-3 py-1.5 rounded-xl bg-white text-black font-bold text-xs shadow-xl border border-black/10 select-none group-hover:bg-gray-50 transition-colors">
               Upload Foto / Video
             </span>
             <button
               type="button"
-              class="w-11 h-11 rounded-full bg-surface shadow-md text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
+              class="w-11 h-11 rounded-full bg-white text-[#C93D68] shadow-xl border border-black/10 group-hover:bg-gray-50 flex items-center justify-center transition-all cursor-pointer"
               aria-label="Upload foto atau video"
-              @click="triggerFileInput"
             >
               <FileUp class="w-5 h-5" />
             </button>
@@ -243,12 +246,12 @@ onUnmounted(() => {
         <button
           v-if="uploadStore.hasTasks"
           type="button"
-          class="glass-nav bg-surface/90 text-app px-4 py-2 rounded-full shadow-md text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-11 transition-all cursor-pointer"
+          class="bg-white text-black px-4 py-2 rounded-full shadow-xl border border-black/10 text-xs font-bold flex items-center gap-2 hover:bg-gray-50 min-h-11 transition-all cursor-pointer"
           @click="uploadStore.isPanelOpen = !uploadStore.isPanelOpen"
         >
           <span
             v-if="uploadStore.activeCount > 0"
-            class="w-2 h-2 rounded-full bg-[#C93D68] dark:bg-[#FF8FAE] animate-ping"
+            class="w-2 h-2 rounded-full bg-[#C93D68] animate-ping"
           />
           <span v-else class="w-2 h-2 rounded-full bg-[#3F9D7A]" />
           <span>{{ uploadStore.activeCount > 0 ? `${uploadStore.activeCount} Mengunggah` : 'Antrean Upload' }}</span>

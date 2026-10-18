@@ -11,6 +11,8 @@ import {
   ArrowRight,
   Plus,
   CalendarDays,
+  ArrowUpDown,
+  Heart,
 } from 'lucide-vue-next';
 import {
   MONTH_NAMES_ID,
@@ -74,6 +76,50 @@ const allDatedFolders = computed(() => {
   return allFolders.value
     .filter((f) => !!f.eventDate)
     .sort((a, b) => (a.eventDate! > b.eventDate! ? 1 : -1));
+});
+
+const sortOrder = ref<'asc' | 'desc'>('asc');
+
+function toggleSortOrder() {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+}
+
+interface TimelineMonthGroup {
+  key: string;
+  monthName: string;
+  year: number;
+  month: number;
+  folders: FolderType[];
+}
+
+const timelineGroups = computed<TimelineMonthGroup[]>(() => {
+  const folders = [...allDatedFolders.value];
+  if (sortOrder.value === 'desc') {
+    folders.reverse();
+  }
+
+  const groupMap = new Map<string, TimelineMonthGroup>();
+  for (const f of folders) {
+    if (!f.eventDate) continue;
+    const parsed = parseYMD(f.eventDate);
+    if (!parsed) continue;
+
+    const key = `${parsed.year}-${String(parsed.month).padStart(2, '0')}`;
+    const monthName = `${MONTH_NAMES_ID[parsed.month - 1]} ${parsed.year}`;
+
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        key,
+        monthName,
+        year: parsed.year,
+        month: parsed.month,
+        folders: [],
+      });
+    }
+    groupMap.get(key)!.folders.push(f);
+  }
+
+  return Array.from(groupMap.values());
 });
 
 // Folders for the currently selected date
@@ -288,21 +334,50 @@ function formatBytes(bytes?: number): string {
             ]"
             @click="selectDay(day)"
           >
-            <span class="text-xs sm:text-sm leading-none">
-              {{ day.dayNum }}
-            </span>
-
-            <!-- Heart / Dot Indicator for Folders -->
-            <div
-              v-if="day.hasFolders"
-              class="mt-1 flex items-center justify-center gap-0.5"
-            >
-              <span
-                class="w-1.5 h-1.5 rounded-full"
-                :class="selectedDate === day.dateStr ? 'bg-white' : 'bg-[#C93D68] dark:bg-[#FF8FAE] animate-pulse'"
+            <!-- Wrapper for Date Number framed by Love/Heart if date has moments -->
+            <div class="relative w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center">
+              <!-- Heart shape encircling the date number -->
+              <Heart
+                v-if="day.hasFolders"
+                class="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-300"
+                :class="[
+                  selectedDate === day.dateStr
+                    ? 'stroke-white fill-white/25 stroke-2 scale-105'
+                    : day.isCurrentMonth
+                    ? 'stroke-[#C93D68] dark:stroke-[#FF8FAE] fill-[#C93D68]/12 dark:fill-[#FF8FAE]/18 stroke-2 group-hover:scale-110 drop-shadow-xs'
+                    : 'stroke-[#C93D68]/50 dark:stroke-[#FF8FAE]/50 fill-[#C93D68]/5 dark:fill-[#FF8FAE]/5 stroke-[1.8] group-hover:scale-105'
+                ]"
               />
+
+              <!-- Optional Count Badge if multiple folders on the same day -->
+              <span
+                v-if="day.folderCount > 1"
+                class="absolute -top-1 -right-1 px-1 min-w-3.5 h-3.5 rounded-full text-[8.5px] font-bold flex items-center justify-center shadow-xs z-20 pointer-events-none"
+                :class="selectedDate === day.dateStr ? 'bg-white text-[#C93D68]' : 'bg-[#C93D68] dark:bg-[#FF8FAE] text-white'"
+              >
+                {{ day.folderCount }}
+              </span>
+
+              <!-- Date Number -->
+              <span
+                class="relative z-10 text-xs sm:text-sm leading-none transition-colors"
+                :class="[
+                  selectedDate === day.dateStr
+                    ? 'text-white font-bold'
+                    : day.hasFolders
+                    ? day.isCurrentMonth
+                      ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold'
+                      : 'text-[#C93D68]/60 dark:text-[#FF8FAE]/60 font-semibold'
+                    : day.isToday
+                    ? 'text-app font-bold'
+                    : day.isCurrentMonth
+                    ? 'text-app font-medium'
+                    : 'text-muted/40 font-normal'
+                ]"
+              >
+                {{ day.dayNum }}
+              </span>
             </div>
-            <div v-else class="h-1.5 mt-1" />
           </button>
         </div>
       </div>
@@ -389,21 +464,43 @@ function formatBytes(bytes?: number): string {
     </div>
 
     <!-- Timeline of All Dated Memories -->
-    <div class="space-y-4">
-      <div class="flex items-center justify-between">
+    <div class="space-y-6">
+      <div class="flex items-center justify-between flex-wrap gap-2.5">
         <div class="flex items-center gap-2">
           <Sparkles class="w-5 h-5 text-[#C93D68] dark:text-[#FF8FAE]" />
-          <h3 class="text-base font-serif font-bold text-app">
+          <h3 class="text-base sm:text-lg font-serif font-bold text-app">
             Garis Waktu Kenangan
           </h3>
+          <span
+            v-if="allDatedFolders.length > 0"
+            class="text-[11px] font-semibold text-[#C93D68] dark:text-[#FF8FAE] bg-[#C93D68]/10 dark:bg-[#FF8FAE]/10 px-2 py-0.5 rounded-full"
+          >
+            {{ allDatedFolders.length }} momen
+          </span>
         </div>
-        <button
-          type="button"
-          class="text-xs text-muted hover:text-app transition-colors cursor-pointer"
-          @click="emit('goToFolders')"
-        >
-          Kelola Folder
-        </button>
+
+        <div class="flex items-center gap-2">
+          <!-- Sort Toggle Button -->
+          <button
+            v-if="allDatedFolders.length > 1"
+            type="button"
+            class="text-xs text-muted hover:text-app px-2.5 py-1.5 rounded-full bg-surface-tint ring-1 ring-black/5 dark:ring-white/10 flex items-center gap-1.5 transition-colors cursor-pointer"
+            @click="toggleSortOrder"
+            :title="sortOrder === 'asc' ? 'Urutan: Dari Terlama (klik untuk balik)' : 'Urutan: Dari Terbaru (klik untuk balik)'"
+          >
+            <ArrowUpDown class="w-3.5 h-3.5 text-[#C93D68] dark:text-[#FF8FAE]" />
+            <span class="hidden xs:inline">{{ sortOrder === 'asc' ? 'Awal Kisah' : 'Terbaru' }}</span>
+          </button>
+
+          <!-- Kelola Folder -->
+          <button
+            type="button"
+            class="text-xs text-muted hover:text-app transition-colors cursor-pointer px-2 py-1"
+            @click="emit('goToFolders')"
+          >
+            Kelola Folder
+          </button>
+        </div>
       </div>
 
       <!-- If no dated folders exist yet -->
@@ -433,39 +530,84 @@ function formatBytes(bytes?: number): string {
         </div>
       </div>
 
-      <!-- List of All Dated Folders -->
-      <div v-else class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+      <!-- Vertical Timeline with connected line and event nodes -->
+      <div v-else class="relative space-y-8 pl-1 sm:pl-2">
         <div
-          v-for="folder in allDatedFolders"
-          :key="folder.id"
-          class="p-4 rounded-3xl bg-surface shadow-soft ring-1 ring-black/5 dark:ring-white/10 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-          @click="emit('selectFolder', folder)"
+          v-for="group in timelineGroups"
+          :key="group.key"
+          class="relative"
         >
-          <div class="flex items-start gap-3">
-            <!-- Cover thumbnail -->
-            <div class="w-16 h-16 rounded-2xl bg-surface-tint overflow-hidden shrink-0 relative shadow-xs">
-              <img
-                v-if="folder.coverUrl"
-                :src="folder.coverUrl"
-                :alt="folder.name"
-                class="w-full h-full object-cover group-hover:scale-105 transition-transform"
-              />
-              <div v-else class="w-full h-full flex items-center justify-center text-muted">
-                <FolderIcon class="w-7 h-7 text-[#C93D68]/60 dark:text-[#FF8FAE]/60" />
-              </div>
+          <!-- Month Header Milestone on Timeline -->
+          <div class="relative flex items-center gap-3 mb-5 select-none">
+            <!-- Milestone circle badge -->
+            <div class="relative z-10 w-9 h-9 sm:w-10 sm:h-10 flex items-center justify-center shrink-0">
+              <CalendarHeart class="w-4.5 h-4.5 sm:w-5 sm:h-5 text-[#C93D68] dark:text-[#FF8FAE] stroke-[2.2]" />
             </div>
 
-            <!-- Content -->
-            <div class="overflow-hidden flex-1 min-w-0">
-              <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#C93D68]/10 dark:bg-[#FF8FAE]/10 text-[#C93D68] dark:text-[#FF8FAE] mb-1">
-                {{ formatEventDate(folder.eventDate) }}
+            <!-- Milestone Label -->
+            <div class="flex items-center gap-2">
+              <span class="text-sm sm:text-base font-serif font-bold text-app">
+                {{ group.monthName }}
               </span>
-              <h4 class="text-sm font-semibold text-app truncate group-hover:text-[#C93D68] dark:group-hover:text-[#FF8FAE] transition-colors">
-                {{ folder.name }}
-              </h4>
-              <p class="text-xs text-muted truncate mt-0.5">
-                {{ folder.itemCount }} item • {{ formatBytes(folder.totalBytes) }}
-              </p>
+            </div>
+          </div>
+
+          <!-- Vertical Timeline Items -->
+          <div class="relative space-y-3.5 sm:space-y-4">
+            <!-- Continuous vertical line connecting all entries in this month -->
+            <div
+              class="absolute left-4.5 sm:left-5 top-0 bottom-4 w-0.5 -translate-x-1/2 bg-linear-to-b from-[#E0527A]/40 via-[#FF9BB5]/30 to-[#E0527A]/15 dark:from-[#FF8FAE]/50 dark:via-[#FF8FAE]/25 dark:to-transparent pointer-events-none"
+            />
+
+            <!-- Entry Item -->
+            <div
+              v-for="folder in group.folders"
+              :key="folder.id"
+              class="relative flex items-start gap-3 sm:gap-4 group cursor-pointer"
+              @click="emit('selectFolder', folder)"
+            >
+              <!-- Timeline node dot with ring -->
+              <div class="relative z-10 w-9 sm:w-10 flex items-center justify-center shrink-0 pt-4">
+                <div class="w-3.5 h-3.5 rounded-full bg-white dark:bg-[#20151B] ring-2 ring-[#E0527A] dark:ring-[#FF8FAE] shadow-xs flex items-center justify-center group-hover:scale-125 group-hover:ring-3 transition-transform">
+                  <div class="w-1.5 h-1.5 rounded-full bg-[#E0527A] dark:bg-[#FF8FAE]" />
+                </div>
+              </div>
+
+              <!-- Memory Card on the Timeline -->
+              <div class="flex-1 min-w-0 p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-surface shadow-soft ring-1 ring-black/5 dark:ring-white/10 hover:shadow-md hover:ring-[#E0527A]/30 dark:hover:ring-[#FF8FAE]/30 transition-all flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                  <!-- Cover thumbnail -->
+                  <div class="w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-surface-tint overflow-hidden shrink-0 relative shadow-xs">
+                    <img
+                      v-if="folder.coverUrl"
+                      :src="folder.coverUrl"
+                      :alt="folder.name"
+                      class="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                    <div v-else class="w-full h-full flex items-center justify-center text-muted">
+                      <FolderIcon class="w-6 h-6 text-[#C93D68]/60 dark:text-[#FF8FAE]/60" />
+                    </div>
+                  </div>
+
+                  <!-- Details -->
+                  <div class="overflow-hidden flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                      <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-[#C93D68]/10 dark:bg-[#FF8FAE]/10 text-[#C93D68] dark:text-[#FF8FAE]">
+                        {{ formatEventDate(folder.eventDate) }}
+                      </span>
+                    </div>
+
+                    <h4 class="text-sm sm:text-base font-semibold text-app truncate group-hover:text-[#C93D68] dark:group-hover:text-[#FF8FAE] transition-colors">
+                      {{ folder.name }}
+                    </h4>
+                  </div>
+                </div>
+
+                <!-- Right Action / Chevron -->
+                <div class="w-8 h-8 rounded-full bg-surface-tint flex items-center justify-center text-muted group-hover:text-[#C93D68] dark:group-hover:text-[#FF8FAE] group-hover:translate-x-1 transition-all shrink-0">
+                  <ChevronRight class="w-4 h-4" />
+                </div>
+              </div>
             </div>
           </div>
         </div>

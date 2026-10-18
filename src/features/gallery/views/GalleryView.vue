@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { useIntersectionObserver } from '@vueuse/core';
+import { useIntersectionObserver, onClickOutside } from '@vueuse/core';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
-import { useGalleryStore } from '../stores/gallery.store';
+import { useGalleryStore, GALLERY_SORT_OPTIONS, GallerySortOption } from '../stores/gallery.store';
 import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useViewerStore } from '@/features/viewer/stores/viewer.store';
 import { useFavorites } from '@/features/gallery/composables/useFavorites';
@@ -13,6 +13,7 @@ import GalleryHero from '../components/GalleryHero.vue';
 import HomeBento from '../components/HomeBento.vue';
 import FloatingBottomNav, { NavTab } from '@/components/navigation/FloatingBottomNav.vue';
 import GalleryDateGroup from '../components/GalleryDateGroup.vue';
+import GalleryItemCard from '../components/GalleryItemCard.vue';
 import GalleryEmptyState from '../components/GalleryEmptyState.vue';
 import FolderCard from '@/features/folders/components/FolderCard.vue';
 import CreateFolderModal from '@/features/folders/components/CreateFolderModal.vue';
@@ -24,21 +25,24 @@ import UploadFAB from '@/features/upload/components/UploadFAB.vue';
 import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
 import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
 import FloatingHearts from '@/components/ui/FloatingHearts.vue';
-import Button from '@/components/ui/Button.vue';
 import { apiFetch } from '@/services/api';
 import { MediaItem, Folder as FolderType } from '@/types';
 import {
   Coffee,
   Folder as FolderIcon,
-  FolderPlus,
   ArrowLeft,
   ChevronRight,
+  ChevronDown,
   Home,
   Heart,
   Download,
   Trash2,
   FolderInput,
   X,
+  Search,
+  ArrowUpDown,
+  Check,
+  Calendar,
 } from 'lucide-vue-next';
 
 const router = useRouter();
@@ -47,7 +51,13 @@ const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
 const folderStore = useFolderStore();
 const viewerStore = useViewerStore();
-const { isFavorite, favoriteIds } = useFavorites();
+const {
+  isFavorite,
+  favoriteIds,
+  universalFavoriteItems,
+  fetchUniversalFavorites,
+  batchSetFavorites,
+} = useFavorites();
 const toast = useToast();
 
 const sentinelRef = ref<HTMLElement | null>(null);
@@ -59,11 +69,98 @@ const activeTab = ref<NavTab>(
   ['home', 'folders', 'calendar', 'gallery', 'favorites'].includes(initialTab) ? initialTab : 'home'
 );
 
-const favoriteCount = computed(() => favoriteIds.value.size);
+// Active author filter in Tab Favorit: 'all' | 'yudhi' | 'wina'
+const favoriteAuthorFilter = ref<'all' | 'yudhi' | 'wina'>('all');
+
+// Strict parent-child folder filter: only show subfolders matching currentFolder, or root folders at root
+const displayedFolders = computed(() => {
+  if (folderStore.currentFolder) {
+    return folderStore.folders.filter((f) => f.parentId === folderStore.currentFolder!.id);
+  }
+  return folderStore.folders.filter((f) => !f.parentId);
+});
+
+// Batch favorite in progress state
+const isBatchFavoriting = ref(false);
+
+// Combined universal favorites from both backend query and local loaded items
+const allFavoriteItems = computed<MediaItem[]>(() => {
+  const map = new Map<string, MediaItem>();
+  for (const item of universalFavoriteItems.value) {
+    map.set(item.id, item);
+  }
+  for (const item of galleryStore.items) {
+    if (isFavorite(item.id)) {
+      map.set(item.id, item);
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    const timeA = new Date(a.takenAt || a.createdAt).getTime();
+    const timeB = new Date(b.takenAt || b.createdAt).getTime();
+    return timeB - timeA;
+  });
+});
+
+const yudhiFavoriteCount = computed(() => {
+  return allFavoriteItems.value.filter((i) => {
+    const name = (i.ownerName || '').toLowerCase();
+    const email = (i.ownerEmail || '').toLowerCase();
+    return name.includes('yudhi') || email.includes('yudhi');
+  }).length;
+});
+
+const winaFavoriteCount = computed(() => {
+  return allFavoriteItems.value.filter((i) => {
+    const name = (i.ownerName || '').toLowerCase();
+    const email = (i.ownerEmail || '').toLowerCase();
+    return name.includes('wina') || email.includes('wina');
+  }).length;
+});
 
 const favoriteItems = computed<MediaItem[]>(() => {
-  return galleryStore.items.filter((item) => isFavorite(item.id));
+  if (favoriteAuthorFilter.value === 'yudhi') {
+    return allFavoriteItems.value.filter((i) => {
+      const name = (i.ownerName || '').toLowerCase();
+      const email = (i.ownerEmail || '').toLowerCase();
+      return name.includes('yudhi') || email.includes('yudhi');
+    });
+  }
+  if (favoriteAuthorFilter.value === 'wina') {
+    return allFavoriteItems.value.filter((i) => {
+      const name = (i.ownerName || '').toLowerCase();
+      const email = (i.ownerEmail || '').toLowerCase();
+      return name.includes('wina') || email.includes('wina');
+    });
+  }
+  return allFavoriteItems.value;
 });
+
+const favoriteCount = computed(() => allFavoriteItems.value.length || favoriteIds.value.size);
+
+const isAllBatchFavorited = computed(() => {
+  if (selectedIds.value.size === 0) return false;
+  return Array.from(selectedIds.value).every((id) => isFavorite(id));
+});
+
+async function handleBatchToggleFavorite() {
+  const ids = Array.from(selectedIds.value);
+  if (ids.length === 0 || isBatchFavoriting.value) return;
+
+  isBatchFavoriting.value = true;
+  const targetState = !isAllBatchFavorited.value;
+  try {
+    await batchSetFavorites(ids, targetState);
+    if (targetState) {
+      toast.success(`${ids.length} kenangan ditambahkan ke Favorit.`);
+    } else {
+      toast.success(`${ids.length} kenangan dihapus dari Favorit.`);
+    }
+  } catch (err: any) {
+    toast.error('Gagal memperbarui favorit: ' + (err.message || 'kesalahan sistem'));
+  } finally {
+    isBatchFavoriting.value = false;
+  }
+}
 
 const groupedFavorites = computed(() => {
   const groups: Record<string, MediaItem[]> = {};
@@ -101,6 +198,23 @@ const isDeleteConfirmOpen = ref(false);
 const folderToDelete = ref<FolderType | null>(null);
 const isDeletingFolder = ref(false);
 
+// Custom Sort Dropdown state
+const isSortDropdownOpen = ref(false);
+const sortDropdownRef = ref<HTMLElement | null>(null);
+onClickOutside(sortDropdownRef, () => {
+  isSortDropdownOpen.value = false;
+});
+
+const currentSortLabel = computed(() => {
+  const opt = GALLERY_SORT_OPTIONS.find((o) => o.id === galleryStore.sortBy);
+  return opt ? opt.label : 'Tanggal Terbaru';
+});
+
+function handleSelectSort(sortId: GallerySortOption) {
+  galleryStore.sortBy = sortId;
+  isSortDropdownOpen.value = false;
+}
+
 // Multi-select state
 const isSelectionMode = ref(false);
 const selectedIds = ref<Set<string>>(new Set());
@@ -109,12 +223,21 @@ const isBatchMoveOpen = ref(false);
 const isBatchMoving = ref(false);
 const isBatchDeleteOpen = ref(false);
 const isBatchDeleting = ref(false);
+const isFolderLoading = ref(false);
+
+const currentFolderItems = computed<MediaItem[]>(() => {
+  if (!folderStore.currentFolder) return [];
+  return galleryStore.items.filter((item) => item.folderId === folderStore.currentFolder!.id);
+});
 
 const currentViewItems = computed<MediaItem[]>(() => {
   if (activeTab.value === 'favorites') {
     return favoriteItems.value;
   }
-  return galleryStore.items;
+  if (activeTab.value === 'folders' && folderStore.currentFolder) {
+    return currentFolderItems.value;
+  }
+  return galleryStore.filteredItems;
 });
 
 const isAllSelected = computed(() => {
@@ -127,7 +250,8 @@ useIntersectionObserver(
   sentinelRef,
   ([{ isIntersecting }]) => {
     if (isIntersecting && galleryStore.hasMore && !galleryStore.isLoading && !galleryStore.isLoadingMore) {
-      galleryStore.fetchMedia(false, folderStore.currentFolder?.id);
+      const targetFolderId = activeTab.value === 'folders' ? folderStore.currentFolder?.id : null;
+      galleryStore.fetchMedia(false, targetFolderId);
     }
   },
   { rootMargin: '300px' }
@@ -137,7 +261,10 @@ function handleSelectMedia(item: MediaItem) {
   if (isSelectionMode.value) {
     handleToggleSelectMedia(item);
   } else {
-    viewerStore.open(item.id);
+    const list = currentViewItems.value.some((i) => i.id === item.id)
+      ? currentViewItems.value
+      : [item, ...currentViewItems.value];
+    viewerStore.open(item.id, list, item);
   }
 }
 
@@ -301,13 +428,7 @@ async function handleCoverChanged(coverMediaId: string | null) {
 
 async function handleEventDateChanged(eventDate: string | null) {
   if (!infoTargetFolder.value) return;
-  try {
-    const updated = await folderStore.updateFolder(infoTargetFolder.value.id, { eventDate });
-    infoTargetFolder.value = updated;
-    toast.success(eventDate ? 'Tanggal kenangan berhasil disimpan.' : 'Tanggal kenangan dihapus.');
-  } catch (err: any) {
-    toast.error(`Gagal mengubah tanggal: ${err.message}`);
-  }
+  infoTargetFolder.value = { ...infoTargetFolder.value, eventDate };
 }
 
 function handleDeleteFolder(folder: FolderType) {
@@ -337,21 +458,42 @@ async function confirmDeleteFolder() {
   }
 }
 
-function handleSelectFolder(folder: FolderType) {
+async function handleSelectFolder(folder: FolderType) {
   activeTab.value = 'folders';
   folderStore.openFolder(folder);
-  galleryStore.fetchMedia(true, folder.id);
+  isFolderLoading.value = true;
   router.push({
     path: '/',
-    query: { ...route.query, tab: 'folders', folder: folder.id },
+    query: { tab: 'folders', folder: folder.id },
   });
+  try {
+    await galleryStore.fetchMedia(true, folder.id);
+  } finally {
+    isFolderLoading.value = false;
+  }
 }
 
 function handleBentoSelectFolder(folder: FolderType) {
   handleSelectFolder(folder);
 }
 
-function handleNavigateBreadcrumb(index: number) {
+async function handleNavigateToFolder(folderId: string) {
+  const target = folderStore.folders.find((f) => f.id === folderId);
+  if (target) {
+    handleSelectFolder(target);
+  } else {
+    try {
+      const folder = await folderStore.getFolderById(folderId);
+      if (folder) {
+        handleSelectFolder(folder);
+      }
+    } catch (err) {
+      console.error('Failed to open folder:', err);
+    }
+  }
+}
+
+async function handleNavigateBreadcrumb(index: number) {
   if (index < 0) {
     handleNavigateRoot();
     return;
@@ -359,11 +501,16 @@ function handleNavigateBreadcrumb(index: number) {
   const target = folderStore.breadcrumbs[index];
   if (target) {
     folderStore.navigateToBreadcrumb(index);
-    galleryStore.fetchMedia(true, target.id);
+    isFolderLoading.value = true;
     router.push({
       path: '/',
-      query: { ...route.query, tab: 'folders', folder: target.id },
+      query: { tab: 'folders', folder: target.id },
     });
+    try {
+      await galleryStore.fetchMedia(true, target.id);
+    } finally {
+      isFolderLoading.value = false;
+    }
   } else {
     handleNavigateRoot();
   }
@@ -371,12 +518,9 @@ function handleNavigateBreadcrumb(index: number) {
 
 function handleNavigateRoot() {
   folderStore.navigateToRoot();
-  galleryStore.fetchMedia(true, null);
-  const nextQuery = { ...route.query };
-  delete nextQuery.folder;
-  router.push({
+  router.replace({
     path: '/',
-    query: nextQuery,
+    query: { tab: 'folders' },
   });
 }
 
@@ -384,7 +528,6 @@ async function syncFolderFromRoute(folderId?: string) {
   if (!folderId) {
     if (folderStore.currentFolder !== null) {
       folderStore.navigateToRoot();
-      await galleryStore.fetchMedia(true, null);
     }
     return;
   }
@@ -392,47 +535,83 @@ async function syncFolderFromRoute(folderId?: string) {
   activeTab.value = 'folders';
 
   if (folderStore.currentFolder?.id === folderId) {
-    return;
+    if (galleryStore.activeFolderFilter === folderId && galleryStore.items.length > 0) {
+      return;
+    }
   }
 
-  const breadcrumbIndex = folderStore.breadcrumbs.findIndex((b) => b.id === folderId);
-  if (breadcrumbIndex !== -1) {
-    folderStore.navigateToBreadcrumb(breadcrumbIndex);
-    await galleryStore.fetchMedia(true, folderId);
-    return;
-  }
-
-  const existingFolder = folderStore.folders.find((f) => f.id === folderId);
-  if (existingFolder) {
-    folderStore.openFolder(existingFolder);
-    await galleryStore.fetchMedia(true, folderId);
-    return;
-  }
-
+  isFolderLoading.value = true;
   try {
-    await folderStore.loadFolderHierarchy(folderId);
+    const breadcrumbIndex = folderStore.breadcrumbs.findIndex((b) => b.id === folderId);
+    if (breadcrumbIndex !== -1) {
+      folderStore.navigateToBreadcrumb(breadcrumbIndex);
+    } else {
+      const existingFolder = folderStore.folders.find((f) => f.id === folderId);
+      if (existingFolder) {
+        folderStore.openFolder(existingFolder);
+      } else {
+        await folderStore.loadFolderHierarchy(folderId);
+      }
+    }
     await galleryStore.fetchMedia(true, folderId);
   } catch (err) {
     console.error('Gagal memuat folder dari route:', err);
     handleNavigateRoot();
+  } finally {
+    isFolderLoading.value = false;
   }
 }
 
-watch(activeTab, (newTab) => {
-  handleCancelSelection();
-  if (route.query.tab !== newTab) {
-    router.replace({
-      path: '/',
-      query: { ...route.query, tab: newTab },
-    });
+function handleTabClick(tab: NavTab) {
+  if (tab === 'folders') {
+    // If clicking Folder tab while already on folders, pop back to root folder list
+    if (activeTab.value === 'folders' && folderStore.currentFolder) {
+      handleNavigateRoot();
+    }
   }
+}
+
+watch(activeTab, async (newTab) => {
+  handleCancelSelection();
+
+  if (newTab !== 'folders') {
+    folderStore.currentFolder = null;
+  }
+
+  const nextQuery: Record<string, any> = {};
+  if (newTab !== 'home') {
+    nextQuery.tab = newTab;
+  }
+
+  if (newTab === 'gallery') {
+    if (galleryStore.items.length === 0 || !!galleryStore.activeFolderFilter) {
+      await galleryStore.fetchMedia(true);
+    }
+  } else if (newTab === 'folders') {
+    if (folderStore.currentFolder) {
+      nextQuery.folder = folderStore.currentFolder.id;
+    } else {
+      folderStore.navigateToRoot();
+    }
+  } else if (newTab === 'favorites') {
+    await fetchUniversalFavorites().catch(() => {});
+    if (galleryStore.items.length === 0) {
+      await galleryStore.fetchMedia(true);
+    }
+  }
+
+  router.replace({
+    path: '/',
+    query: nextQuery,
+  });
 });
 
 watch(
   () => route.query.tab,
   (newTab) => {
-    if (newTab && ['home', 'folders', 'calendar', 'gallery', 'favorites'].includes(newTab as string)) {
-      activeTab.value = newTab as NavTab;
+    const tabName = (newTab as NavTab) || 'home';
+    if (['home', 'folders', 'calendar', 'gallery', 'favorites'].includes(tabName) && activeTab.value !== tabName) {
+      activeTab.value = tabName;
     }
   }
 );
@@ -446,9 +625,9 @@ watch(
 );
 
 onMounted(async () => {
-  await Promise.all([
-    authStore.fetchMe().catch(() => {}),
-  ]);
+  // Fire background auth and favorites non-blocking
+  authStore.fetchMe().catch(() => {});
+  fetchUniversalFavorites().catch(() => {});
 
   const initialFolderId = route.query.folder as string | undefined;
   if (initialFolderId) {
@@ -461,7 +640,7 @@ onMounted(async () => {
   } else {
     await Promise.all([
       folderStore.fetchFolders(null).catch(() => {}),
-      galleryStore.fetchMedia(true, null).catch(() => {}),
+      galleryStore.fetchMedia(true).catch(() => {}),
     ]);
   }
 });
@@ -548,35 +727,14 @@ onMounted(async () => {
               </button>
             </template>
           </div>
-
-          <!-- Create Folder Quick Action -->
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            class="shrink-0 text-xs flex items-center justify-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-xl cursor-pointer"
-            aria-label="Buat folder baru"
-            @click="handleOpenCreateFolder"
-          >
-            <FolderPlus class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
-            <span class="hidden sm:inline">Folder Baru</span>
-          </Button>
         </nav>
 
-        <!-- FOLDERS GRID SECTION -->
-        <section v-if="folderStore.folders.length > 0" class="space-y-3">
-          <div class="flex items-center justify-between">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
-              <FolderIcon class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
-              <span>{{ folderStore.currentFolder ? 'Sub-Folder' : 'Folder Kenangan' }}</span>
-              <span class="text-xs font-normal">({{ folderStore.folders.length }})</span>
-            </h2>
-          </div>
-
+        <!-- FOLDERS GRID SECTION (STRICTLY ISOLATED BY PARENT ID) -->
+        <section v-if="displayedFolders.length > 0" class="space-y-3">
           <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
             <FolderCard
-              v-for="(folder, index) in folderStore.folders"
-              :key="folder.id"
+              v-for="(folder, index) in displayedFolders"
+              :key="`${folder.id}-${folder.coverUrl || ''}`"
               :folder="folder"
               :index-number="index + 1"
               @select="handleSelectFolder"
@@ -587,17 +745,32 @@ onMounted(async () => {
           </div>
         </section>
 
-        <!-- MEDIA IN CURRENT FOLDER -->
-        <section v-if="folderStore.currentFolder" class="space-y-3">
-          <div v-if="galleryStore.items.length > 0" class="flex items-center justify-between pt-2">
-            <h2 class="text-sm font-semibold uppercase tracking-wider text-muted">
-              File di "{{ folderStore.currentFolder.name }}"
+        <!-- MEDIA IN CURRENT FOLDER (CLEAN UNIFIED GRID WITHOUT DATE HEADERS) -->
+        <section v-if="folderStore.currentFolder" class="space-y-4">
+          <div v-if="currentFolderItems.length > 0" class="flex items-center justify-between pt-2">
+            <h2 class="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
+              <span>Momen di "{{ folderStore.currentFolder.name }}"</span>
             </h2>
           </div>
 
-          <!-- Empty folder state -->
+          <!-- Loading Skeleton State when opening/fetching folder -->
           <div
-            v-if="galleryStore.items.length === 0"
+            v-if="(galleryStore.isLoading || isFolderLoading) && currentFolderItems.length === 0"
+            class="space-y-4 py-2"
+          >
+            <div class="h-4 w-32 bg-surface-tint rounded-lg animate-pulse" />
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 pl-1">
+              <div
+                v-for="n in 6"
+                :key="n"
+                class="aspect-square rounded-2xl bg-surface-tint/70 animate-pulse border border-black/5 dark:border-white/5"
+              />
+            </div>
+          </div>
+
+          <!-- Empty folder state (only shown when NOT loading and confirmed 0 items) -->
+          <div
+            v-else-if="!galleryStore.isLoading && !isFolderLoading && currentFolderItems.length === 0"
             class="text-center py-12 px-4 rounded-3xl bg-surface shadow-soft-sm space-y-3"
           >
             <FolderIcon class="w-12 h-12 mx-auto text-[#C93D68]/80 dark:text-[#FF8FAE]/80 stroke-[1.5]" />
@@ -609,18 +782,31 @@ onMounted(async () => {
             </p>
           </div>
 
-          <div v-else class="space-y-2">
-            <GalleryDateGroup
-              v-for="group in galleryStore.groupedByDate"
-              :key="group.dateKey"
-              :date-label="group.dateLabel"
-              :items="group.items"
-              :is-selection-mode="isSelectionMode"
-              :selected-ids="selectedIds"
-              @select="handleSelectMedia"
-              @longpress="handleLongPressMedia"
-              @toggle-select="handleToggleSelectMedia"
-            />
+          <!-- Direct cohesive grid of photos in this folder -->
+          <div v-else class="space-y-4">
+            <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 pl-1">
+              <GalleryItemCard
+                v-for="item in currentFolderItems"
+                :key="item.id"
+                :item="item"
+                :is-selection-mode="isSelectionMode"
+                :is-selected="selectedIds.has(item.id)"
+                @click="handleSelectMedia"
+                @longpress="handleLongPressMedia"
+                @toggle-select="handleToggleSelectMedia"
+              />
+            </div>
+
+            <!-- Sentinel element for infinite scroll inside folder -->
+            <div ref="sentinelRef" class="h-10 flex items-center justify-center">
+              <div
+                v-if="galleryStore.isLoadingMore"
+                class="flex items-center gap-2 text-xs text-muted"
+              >
+                <div class="w-2 h-2 rounded-full bg-[#C93D68] animate-ping" />
+                <span>Memuat lebih banyak kenangan...</span>
+              </div>
+            </div>
           </div>
         </section>
       </section>
@@ -634,44 +820,237 @@ onMounted(async () => {
         />
       </section>
 
-      <!-- TAB 4: GALERI (CHRONOLOGICAL TIMELINE STREAM) -->
-      <section v-else-if="activeTab === 'gallery'" class="space-y-4">
-        <div class="flex items-center justify-between">
+      <!-- TAB 4: GALERI (GROUPED BY FOLDER & DATE) -->
+      <section v-else-if="activeTab === 'gallery'" class="space-y-4 sm:space-y-5">
+        <!-- Gallery Header & Total Moments Count -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
           <div>
             <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
-              <span>Semua Kenangan Foto & Video</span>
+              <span>Semua Kenangan Foto &amp; Video</span>
             </h2>
             <p class="text-xs text-muted mt-0.5">
-              Urutan linimasa momen berharga dari waktu ke waktu
+              Dikelompokkan rapi berdasarkan folder kenangan dan tanggal momen
             </p>
           </div>
         </div>
 
+        <!-- Controls: Search (by Folder Name & File) & Sort By -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+          <!-- Search Bar with Live Folder & File Search -->
+          <div class="relative flex-1">
+            <Search class="w-4 h-4 text-muted absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              v-model="galleryStore.searchQuery"
+              type="text"
+              placeholder="Cari nama folder (misal: Twozza, Liburan) atau foto..."
+              class="w-full pl-10 pr-9 py-2.5 rounded-2xl bg-white dark:bg-surface text-xs sm:text-sm font-medium text-app placeholder:text-muted/70 shadow-soft-sm border border-black/5 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-[#C93D68]/30 transition-all"
+            />
+            <button
+              v-if="galleryStore.searchQuery"
+              type="button"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full hover:bg-black/5 dark:hover:bg-white/10 text-muted hover:text-app flex items-center justify-center transition-colors cursor-pointer"
+              title="Hapus pencarian"
+              @click="galleryStore.searchQuery = ''"
+            >
+              <X class="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <!-- Sort By Custom Dropdown Selector -->
+          <div ref="sortDropdownRef" class="relative shrink-0">
+            <button
+              type="button"
+              class="w-full sm:w-auto flex items-center justify-between gap-2.5 pl-3.5 pr-3 py-2.5 rounded-2xl bg-white dark:bg-surface text-xs font-semibold text-app shadow-soft-sm border border-black/5 dark:border-white/10 hover:border-[#C93D68]/30 dark:hover:border-[#FF8FAE]/30 focus:outline-none focus:ring-2 focus:ring-[#C93D68]/30 transition-all cursor-pointer select-none"
+              aria-haspopup="listbox"
+              :aria-expanded="isSortDropdownOpen"
+              @click="isSortDropdownOpen = !isSortDropdownOpen"
+            >
+              <div class="flex items-center gap-2 truncate">
+                <ArrowUpDown class="w-3.5 h-3.5 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
+                <span class="truncate max-w-44 sm:max-w-none">
+                  Urut: {{ currentSortLabel }}
+                </span>
+              </div>
+              <ChevronDown
+                class="w-3.5 h-3.5 text-muted shrink-0 transition-transform duration-200"
+                :class="{ 'rotate-180': isSortDropdownOpen }"
+              />
+            </button>
+
+            <!-- Custom Glassmorphic Popover Menu -->
+            <Transition
+              enter-active-class="transition duration-150 ease-out"
+              enter-from-class="opacity-0 scale-95 -translate-y-1"
+              enter-to-class="opacity-100 scale-100 translate-y-0"
+              leave-active-class="transition duration-100 ease-in"
+              leave-from-class="opacity-100 scale-100 translate-y-0"
+              leave-to-class="opacity-0 scale-95 -translate-y-1"
+            >
+              <div
+                v-if="isSortDropdownOpen"
+                class="absolute right-0 mt-2 z-40 w-64 p-1.5 rounded-2xl bg-white/95 dark:bg-[#2A1D24]/95 backdrop-blur-xl shadow-xl ring-1 ring-black/5 dark:ring-white/10 space-y-1 select-none focus:outline-none"
+                role="listbox"
+              >
+                <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted border-b border-black/5 dark:border-white/5">
+                  Urutkan Kenangan
+                </div>
+
+                <button
+                  v-for="opt in GALLERY_SORT_OPTIONS"
+                  :key="opt.id"
+                  type="button"
+                  role="option"
+                  :aria-selected="galleryStore.sortBy === opt.id"
+                  class="w-full px-3 py-2 rounded-xl text-xs flex items-center justify-between transition-colors cursor-pointer text-left"
+                  :class="[
+                    galleryStore.sortBy === opt.id
+                      ? 'bg-[#C93D68]/10 dark:bg-[#FF8FAE]/15 text-[#C93D68] dark:text-[#FF8FAE] font-bold'
+                      : 'text-app/80 hover:bg-black/5 dark:hover:bg-white/5 hover:text-app font-medium'
+                  ]"
+                  @click="handleSelectSort(opt.id)"
+                >
+                  <span>Urut: {{ opt.label }}</span>
+                  <Check
+                    v-if="galleryStore.sortBy === opt.id"
+                    class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0 stroke-[2.5]"
+                  />
+                </button>
+              </div>
+            </Transition>
+          </div>
+        </div>
+
+        <!-- Search Active Pill -->
+        <div
+          v-if="galleryStore.searchQuery"
+          class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-surface-tint text-xs text-app"
+        >
+          <div class="flex items-center gap-1.5 truncate">
+            <span class="text-muted">Hasil pencarian folder &amp; foto:</span>
+            <span class="font-bold text-[#C93D68] dark:text-[#FF8FAE] truncate">
+              "{{ galleryStore.searchQuery }}"
+            </span>
+            <span class="text-[10px] text-muted px-1.5 py-0.5 rounded-md bg-surface font-semibold shrink-0">
+              {{ galleryStore.filteredItems.length }} hasil
+            </span>
+          </div>
+
+          <button
+            type="button"
+            class="text-[11px] font-semibold text-[#C93D68] dark:text-[#FF8FAE] hover:underline cursor-pointer shrink-0 ml-2"
+            @click="galleryStore.searchQuery = ''"
+          >
+            Reset
+          </button>
+        </div>
+
         <div
           v-if="galleryStore.isLoading && galleryStore.items.length === 0"
-          class="py-8 flex items-center justify-center gap-2 text-xs text-muted"
+          class="py-12 flex flex-col items-center justify-center gap-3 text-xs text-muted"
         >
-          <div class="w-2 h-2 rounded-full bg-[#C93D68] animate-ping" />
+          <div class="w-6 h-6 rounded-full border-2 border-[#C93D68] border-t-transparent animate-spin" />
           <span>Memuat kenangan...</span>
         </div>
 
         <GalleryEmptyState
-          v-else-if="galleryStore.items.length === 0"
+          v-else-if="!galleryStore.isLoading && galleryStore.items.length === 0"
           @upload="handleEmptyUpload"
         />
 
-        <div v-else class="space-y-2">
-          <GalleryDateGroup
-            v-for="group in galleryStore.groupedByDate"
-            :key="group.dateKey"
-            :date-label="group.dateLabel"
-            :items="group.items"
-            :is-selection-mode="isSelectionMode"
-            :selected-ids="selectedIds"
-            @select="handleSelectMedia"
-            @longpress="handleLongPressMedia"
-            @toggle-select="handleToggleSelectMedia"
-          />
+        <!-- Empty search results state -->
+        <div
+          v-else-if="galleryStore.searchQuery && galleryStore.filteredItems.length === 0"
+          class="py-16 text-center rounded-3xl bg-surface shadow-soft-sm p-6 space-y-3"
+        >
+          <div class="w-12 h-12 rounded-full bg-[#C93D68]/10 text-[#C93D68] dark:text-[#FF8FAE] flex items-center justify-center mx-auto">
+            <Search class="w-6 h-6 stroke-[1.75]" />
+          </div>
+          <h3 class="text-base font-bold text-app">
+            Tidak ada folder atau foto yang cocok
+          </h3>
+          <p class="text-xs text-muted max-w-sm mx-auto">
+            Tidak ditemukan folder atau kenangan dengan kata kunci "{{ galleryStore.searchQuery }}". Coba cari nama folder lain seperti "Twozza", "Liburan", dll.
+          </p>
+          <button
+            type="button"
+            class="mt-2 px-4 py-2 rounded-xl bg-surface-tint hover:bg-surface-tint/80 text-xs font-semibold text-[#C93D68] dark:text-[#FF8FAE] transition-all cursor-pointer inline-flex items-center gap-1.5"
+            @click="galleryStore.searchQuery = ''"
+          >
+            <span>Hapus Pencarian</span>
+          </button>
+        </div>
+
+        <div v-else class="space-y-6 sm:space-y-8">
+          <!-- Folder Section Card -->
+          <template v-if="galleryStore.groupedByFolderAndDate.length > 0">
+            <div
+              v-for="folderGroup in galleryStore.groupedByFolderAndDate"
+              :key="folderGroup.folderId || 'unfiled'"
+              class="rounded-3xl bg-surface/80 backdrop-blur-xs border border-white/60 dark:border-white/5 shadow-soft-sm p-4 sm:p-5 transition-all"
+            >
+              <!-- Folder Header with Cute Badge, Name & Direct Jump -->
+              <div class="flex items-center justify-between pb-3 mb-4 border-b border-black/5 dark:border-white/5">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE] shrink-0">
+                    <FolderIcon class="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current" />
+                  </div>
+                  <div class="min-w-0">
+                    <h3 class="text-sm sm:text-base font-bold text-app truncate flex items-center gap-2">
+                      <span class="truncate">{{ folderGroup.folderName }}</span>
+                    </h3>
+                    <p
+                      v-if="folderGroup.folderEventDateFormatted"
+                      class="text-[11px] text-muted flex items-center gap-1 mt-0.5"
+                    >
+                      <Calendar class="w-3 h-3 text-[#C93D68] dark:text-[#FF8FAE]" />
+                      <span>{{ folderGroup.folderEventDateFormatted }}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Action to navigate to that folder directly in Folders tab -->
+                <button
+                  v-if="folderGroup.folderId"
+                  type="button"
+                  class="px-2.5 py-1 text-xs font-semibold text-[#C93D68] dark:text-[#FF8FAE] hover:bg-[#C93D68]/10 dark:hover:bg-[#FF8FAE]/10 rounded-xl transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+                  title="Buka folder ini"
+                  @click="handleNavigateToFolder(folderGroup.folderId)"
+                >
+                  <span>Buka Folder</span>
+                  <ChevronRight class="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <!-- Date Groups inside this Folder -->
+              <div class="space-y-5">
+                <GalleryDateGroup
+                  v-for="group in folderGroup.dateGroups"
+                  :key="group.dateKey"
+                  :date-label="group.dateLabel"
+                  :items="group.items"
+                  :is-selection-mode="isSelectionMode"
+                  :selected-ids="selectedIds"
+                  @select="handleSelectMedia"
+                  @longpress="handleLongPressMedia"
+                  @toggle-select="handleToggleSelectMedia"
+                />
+              </div>
+            </div>
+          </template>
+
+          <!-- Fallback direct grid if grouping produced 0 groups but items exist -->
+          <div v-else class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3 pl-1">
+            <GalleryItemCard
+              v-for="item in galleryStore.filteredItems"
+              :key="item.id"
+              :item="item"
+              :is-selection-mode="isSelectionMode"
+              :is-selected="selectedIds.has(item.id)"
+              @click="handleSelectMedia"
+              @longpress="handleLongPressMedia"
+              @toggle-select="handleToggleSelectMedia"
+            />
+          </div>
 
           <!-- Sentinel element for infinite scroll -->
           <div ref="sentinelRef" class="h-10 flex items-center justify-center">
@@ -688,14 +1067,50 @@ onMounted(async () => {
 
       <!-- TAB 5: FAVORIT (STARRED / LIKED MOMENTS) -->
       <section v-else-if="activeTab === 'favorites'" class="space-y-4">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
               <span>Momen Terfavorit</span>
             </h2>
             <p class="text-xs text-muted mt-0.5">
-              Koleksi foto dan video paling berkesan yang kamu simpan
+              Koleksi kenangan favorit bersama Yudhi Adinata &amp; Wina Sugianti
             </p>
+          </div>
+
+          <!-- Author Filter Pills (Universal Couple Filters: Semua, Yudhi, Wina) -->
+          <div class="flex items-center gap-1.5 p-1 rounded-2xl bg-surface shadow-soft-xs text-xs font-semibold self-start sm:self-auto">
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              :class="favoriteAuthorFilter === 'all' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
+              @click="favoriteAuthorFilter = 'all'"
+            >
+              <Heart class="w-3.5 h-3.5 fill-current" />
+              <span>Semua</span>
+              <span class="text-[11px] opacity-80">({{ allFavoriteItems.length }})</span>
+            </button>
+
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              :class="favoriteAuthorFilter === 'yudhi' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
+              @click="favoriteAuthorFilter = 'yudhi'"
+            >
+              <span class="w-4 h-4 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-300 text-[10px] flex items-center justify-center font-bold">Y</span>
+              <span>Yudhi</span>
+              <span class="text-[11px] opacity-80">({{ yudhiFavoriteCount }})</span>
+            </button>
+
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
+              :class="favoriteAuthorFilter === 'wina' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
+              @click="favoriteAuthorFilter = 'wina'"
+            >
+              <span class="w-4 h-4 rounded-full bg-rose-500/20 text-[#C93D68] dark:text-[#FF8FAE] text-[10px] flex items-center justify-center font-bold">W</span>
+              <span>Wina</span>
+              <span class="text-[11px] opacity-80">({{ winaFavoriteCount }})</span>
+            </button>
           </div>
         </div>
 
@@ -707,9 +1122,6 @@ onMounted(async () => {
           <h3 class="text-base font-semibold text-app">
             Belum ada kenangan favorit
           </h3>
-          <p class="text-xs text-muted max-w-sm mx-auto">
-            Buka foto atau video apa pun, lalu ketuk tombol hati (❤️) di pojok atas untuk menyimpannya ke koleksi favorit ini.
-          </p>
         </div>
 
         <div v-else class="space-y-2">
@@ -733,6 +1145,7 @@ onMounted(async () => {
       v-if="!isSelectionMode"
       v-model="activeTab"
       :favorite-count="favoriteCount"
+      @tab-click="handleTabClick"
     />
 
     <!-- MULTI-SELECT FLOATING ACTION DOCK -->
@@ -775,8 +1188,23 @@ onMounted(async () => {
             </div>
           </div>
 
-          <!-- Action Buttons (Unduh, Pindah, Hapus) -->
+          <!-- Action Buttons (Favorit, Unduh, Pindah, Hapus) -->
           <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            <!-- Favorite Button -->
+            <button
+              type="button"
+              class="h-10 px-2.5 sm:px-3 rounded-2xl bg-surface-tint hover:bg-[#C93D68]/10 text-app flex items-center gap-1.5 text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+              :disabled="selectedIds.size === 0 || isBatchFavoriting"
+              @click="handleBatchToggleFavorite"
+              :title="isAllBatchFavorited ? 'Hapus dari Favorit' : 'Simpan ke Favorit'"
+            >
+              <Heart
+                class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0 transition-transform"
+                :class="{ 'fill-current scale-110': isAllBatchFavorited }"
+              />
+              <span class="hidden xs:inline">Favorit</span>
+            </button>
+
             <!-- Download Button -->
             <button
               type="button"
@@ -817,7 +1245,7 @@ onMounted(async () => {
       </div>
     </Transition>
 
-    <!-- Upload Floating Action Button (Only shown on Folder page, hidden in selection mode) -->
+    <!-- Upload Floating Action Button (Hanya muncul di halaman folder, tersembunyi saat mode seleksi) -->
     <UploadFAB
       ref="fabRef"
       :hide-main-fab="activeTab !== 'folders' || isSelectionMode"

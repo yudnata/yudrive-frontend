@@ -82,7 +82,9 @@ function nextSlide() {
 onMounted(async () => {
   try {
     const [mediaRes, foldersRes] = await Promise.all([
-      apiFetch<{ items: MediaItem[] }>('/media?limit=50').catch(() => ({ items: [] })),
+      apiFetch<{ items: MediaItem[] }>('/media/random?limitPerFolder=3&limit=60')
+        .catch(() => apiFetch<{ items: MediaItem[] }>('/media?limit=50'))
+        .catch(() => ({ items: [] })),
       apiFetch<{ folders: FolderType[] }>('/folders?all=true').catch(() => ({ folders: [] })),
     ]);
     if (mediaRes?.items) poolMedia.value = mediaRes.items;

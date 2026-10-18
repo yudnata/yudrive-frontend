@@ -14,7 +14,13 @@ export const useFolderStore = defineStore('folders', () => {
     try {
       const query = parentId ? `?parentId=${parentId}` : '';
       const data = await apiFetch<{ folders: Folder[] }>(`/folders${query}`);
-      folders.value = data.folders || [];
+      const fetched = data.folders || [];
+      // Strict guard: subfolders must match parentId, root folders must have no parentId
+      if (parentId) {
+        folders.value = fetched.filter((f) => f.parentId === parentId);
+      } else {
+        folders.value = fetched.filter((f) => !f.parentId);
+      }
     } catch (err) {
       console.error('Failed to fetch folders:', err);
       folders.value = [];
@@ -104,12 +110,14 @@ export const useFolderStore = defineStore('folders', () => {
 
     currentFolder.value = target;
     breadcrumbs.value = chain;
+    folders.value = [];
     await fetchFolders(target.id);
     return target;
   }
 
   function openFolder(folder: Folder): void {
     currentFolder.value = folder;
+    folders.value = [];
     const existingIndex = breadcrumbs.value.findIndex((b) => b.id === folder.id);
     if (existingIndex !== -1) {
       breadcrumbs.value = breadcrumbs.value.slice(0, existingIndex + 1);
@@ -127,6 +135,7 @@ export const useFolderStore = defineStore('folders', () => {
 
     const target = breadcrumbs.value[targetIndex];
     currentFolder.value = target;
+    folders.value = [];
     breadcrumbs.value = breadcrumbs.value.slice(0, targetIndex + 1);
     fetchFolders(target.id);
     return target;

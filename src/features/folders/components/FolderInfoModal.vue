@@ -5,6 +5,9 @@ import { apiFetch } from '@/services/api';
 import Button from '@/components/ui/Button.vue';
 import { Info, X, Calendar, CalendarHeart, HardDrive, Files, Image as ImageIcon, Check } from 'lucide-vue-next';
 
+import { useFolderStore } from '@/features/folders/stores/folders.store';
+import { useToast } from '@/composables/useToast';
+
 const props = defineProps<{
   isOpen: boolean;
   folder: FolderType | null;
@@ -15,6 +18,9 @@ const emit = defineEmits<{
   (e: 'coverChanged', coverMediaId: string | null): void;
   (e: 'dateChanged', eventDate: string | null): void;
 }>();
+
+const folderStore = useFolderStore();
+const toast = useToast();
 
 const isSelectingCover = ref(false);
 const folderPhotos = ref<MediaItem[]>([]);
@@ -88,10 +94,17 @@ async function handleRemoveCover() {
 }
 
 async function handleSaveEventDate() {
-  if (!props.folder) return;
+  if (!props.folder || isSavingDate.value) return;
+  const newDate = editEventDate.value.trim() || null;
+  if (newDate === (props.folder.eventDate || null)) return;
+
   isSavingDate.value = true;
   try {
-    emit('dateChanged', editEventDate.value || null);
+    await folderStore.updateFolder(props.folder.id, { eventDate: newDate });
+    emit('dateChanged', newDate);
+    toast.success(newDate ? 'Tanggal kenangan berhasil disimpan.' : 'Tanggal kenangan dihapus.');
+  } catch (err: any) {
+    toast.error(`Gagal menyimpan tanggal: ${err.message || 'Terjadi kesalahan'}`);
   } finally {
     isSavingDate.value = false;
   }
@@ -100,7 +113,14 @@ async function handleSaveEventDate() {
 async function handleClearEventDate() {
   if (!props.folder) return;
   editEventDate.value = '';
-  emit('dateChanged', null);
+  await handleSaveEventDate();
+}
+
+async function handleFinishAndClose() {
+  if (props.folder && editEventDate.value !== (props.folder.eventDate || '')) {
+    await handleSaveEventDate();
+  }
+  emit('close');
 }
 </script>
 
@@ -131,7 +151,7 @@ async function handleClearEventDate() {
             type="button"
             class="p-1 rounded-full text-muted hover:text-app transition-colors focus:outline-none min-h-8 min-w-8 flex items-center justify-center cursor-pointer"
             aria-label="Tutup"
-            @click="$emit('close')"
+            @click="handleFinishAndClose"
           >
             <X class="w-4 h-4" />
           </button>
@@ -251,6 +271,7 @@ async function handleClearEventDate() {
                 v-model="editEventDate"
                 type="date"
                 class="flex-1 px-3 py-2 text-xs rounded-xl bg-surface ring-1 ring-black/5 dark:ring-white/10 text-app focus:outline-none focus:ring-2 focus:ring-[#FF8FAE]"
+                @change="handleSaveEventDate"
               />
               <Button
                 type="button"
@@ -299,7 +320,7 @@ async function handleClearEventDate() {
             type="button"
             variant="primary"
             size="md"
-            @click="$emit('close')"
+            @click="handleFinishAndClose"
           >
             Selesai
           </Button>

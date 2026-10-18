@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Folder as FolderType } from '@/types';
 import {
   Folder as FolderIcon,
@@ -7,8 +7,8 @@ import {
   Edit2,
   Trash2,
   X,
-  CalendarHeart,
   Heart,
+  Calendar,
 } from 'lucide-vue-next';
 import { formatEventDate } from '@/utils/date';
 
@@ -28,16 +28,6 @@ const isMenuOpen = ref(false);
 const isPressing = ref(false);
 let pressTimer: ReturnType<typeof setTimeout> | null = null;
 let isLongPressTriggered = false;
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const gb = bytes / (1024 * 1024 * 1024);
-  if (gb >= 1) return `${gb.toFixed(1)} GB`;
-  const mb = bytes / (1024 * 1024);
-  if (mb >= 1) return `${mb.toFixed(0)} MB`;
-  const kb = bytes / 1024;
-  return `${kb.toFixed(0)} KB`;
-}
 
 function startPress() {
   isLongPressTriggered = false;
@@ -84,6 +74,36 @@ function onAction(action: 'info' | 'rename' | 'delete') {
   else if (action === 'rename') emit('rename', props.folder);
   else if (action === 'delete') emit('delete', props.folder);
 }
+
+function formatFolderDate(dateStr?: string | null): string {
+  if (!dateStr) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return formatEventDate(dateStr);
+  }
+  try {
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) {
+      return new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).format(d);
+    }
+  } catch {
+    // fallback
+  }
+  return '';
+}
+
+const displayDate = computed(() => {
+  if (props.folder.eventDate) {
+    return formatFolderDate(props.folder.eventDate);
+  }
+  if (props.folder.createdAt) {
+    return formatFolderDate(props.folder.createdAt);
+  }
+  return '';
+});
 </script>
 
 <template>
@@ -127,7 +147,7 @@ function onAction(action: 'info' | 'rename' | 'delete') {
 
       <!-- 2. FOLDER BODY (Tabbed silhouette with cover photo or cute folder pocket interior) -->
       <div
-        class="relative w-full aspect-4/3 rounded-2xl rounded-tl-none overflow-hidden bg-gradient-to-b from-[#FFD6E3] via-[#FFEBF1] to-[#FFE0EA] dark:from-[#3D202F] dark:via-[#2F1724] dark:to-[#25121C] border border-[#FFCCD9]/80 dark:border-white/10 shadow-xs"
+        class="relative w-full aspect-4/3 rounded-2xl rounded-tl-none overflow-hidden bg-linear-to-b from-[#FFD6E3] via-[#FFEBF1] to-[#FFE0EA] dark:from-[#3D202F] dark:via-[#2F1724] dark:to-[#25121C] border border-[#FFCCD9]/80 dark:border-white/10 shadow-xs"
       >
         <!-- A. When Folder has Cover Photo -->
         <template v-if="folder.coverUrl">
@@ -148,37 +168,22 @@ function onAction(action: 'info' | 'rename' | 'delete') {
             <Heart class="w-3.5 h-3.5 text-[#FF8FAE]/50 fill-current absolute right-3 top-3" />
           </div>
 
-          <!-- Front Pocket Flap (Curved front flap holding the paper) -->
-          <div class="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-[#FFB8CC] to-[#FFD6E3] dark:from-[#361A28] dark:to-[#452234] border-t border-white/40 dark:border-white/10 shadow-sm flex items-center justify-center pb-8">
-            <div class="flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-white/30 dark:bg-black/20 backdrop-blur-xs text-[#C93D68] dark:text-[#FF8FAE] shadow-2xs">
-              <FolderIcon class="w-3.5 h-3.5 fill-current opacity-90" />
-              <span class="text-[10px] font-bold tracking-tight">Kenangan</span>
-            </div>
-          </div>
+          <!-- Front Pocket Flap -->
+          <div class="absolute bottom-0 inset-x-0 h-14 bg-linear-to-t from-[#FFB8CC] to-[#FFD6E3] dark:from-[#361A28] dark:to-[#452234] border-t border-white/40 dark:border-white/10 shadow-sm" />
         </template>
 
         <!-- C. BOTTOM OVERLAY: White text with deep shadow & gradient scrim for 100% readability even on pure white covers -->
-        <div class="absolute inset-x-0 bottom-0 pt-10 pb-2.5 px-3 bg-gradient-to-t from-black/90 via-black/55 to-transparent flex flex-col justify-end pointer-events-none">
+        <div class="absolute inset-x-0 bottom-0 pt-10 pb-2 sm:pb-2.5 px-2.5 sm:px-3 bg-linear-to-t from-black/90 via-black/55 to-transparent flex flex-col justify-end pointer-events-none">
           <h3 class="text-xs sm:text-sm font-bold text-white truncate tracking-tight drop-shadow-[0_2px_3px_rgba(0,0,0,0.9)]">
             {{ folder.name }}
           </h3>
-
-          <div class="flex items-center justify-between gap-1 text-[10px] sm:text-[11px] text-white/90 font-medium mt-0.5 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
-            <div class="flex items-center gap-1.5 truncate">
-              <span>{{ folder.itemCount }} item</span>
-              <span class="opacity-50">•</span>
-              <span>{{ formatBytes(folder.totalBytes) }}</span>
-            </div>
-
-            <!-- Optional Event Date Badge -->
-            <div
-              v-if="folder.eventDate"
-              class="flex items-center gap-1 text-[9px] sm:text-[10px] text-[#FFB3C7] shrink-0 font-semibold"
-            >
-              <CalendarHeart class="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0" />
-              <span class="truncate">{{ formatEventDate(folder.eventDate) }}</span>
-            </div>
-          </div>
+          <p
+            v-if="displayDate"
+            class="text-[10px] sm:text-[11px] text-white/85 font-medium truncate mt-0.5 flex items-center gap-1 drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]"
+          >
+            <Calendar class="w-2.5 h-2.5 sm:w-3 sm:h-3 shrink-0 opacity-80" />
+            <span>{{ displayDate }}</span>
+          </p>
         </div>
       </div>
     </div>
@@ -206,8 +211,8 @@ function onAction(action: 'info' | 'rename' | 'delete') {
                 <h3 class="text-sm font-bold text-app truncate">
                   {{ indexNumber !== undefined ? `#${indexNumber} ` : '' }}{{ folder.name }}
                 </h3>
-                <p class="text-[11px] text-muted truncate">
-                  {{ folder.itemCount }} item • {{ formatBytes(folder.totalBytes) }}
+                <p v-if="folder.itemCount > 0" class="text-[11px] text-muted truncate mt-0.5">
+                  {{ folder.itemCount }} kenangan tersimpan
                 </p>
               </div>
             </div>

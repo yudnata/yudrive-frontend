@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { MediaItem } from '@/types';
-import { Play, Check } from 'lucide-vue-next';
+import { Play, Check, Heart, Image as ImageIcon } from 'lucide-vue-next';
+import { useFavorites } from '../composables/useFavorites';
+
+const { isFavorite } = useFavorites();
 
 interface Props {
   item: MediaItem;
@@ -90,27 +93,35 @@ function formatDuration(sec?: number): string {
     @contextmenu.prevent
     @click="handleClick"
   >
-    <!-- Shimmer placeholder while image is loading -->
+    <!-- Shimmer placeholder while image is loading in background -->
     <div
       v-if="!imageLoaded && !imageError"
-      class="absolute inset-0 skeleton-shimmer"
+      class="absolute inset-0 skeleton-shimmer pointer-events-none"
     />
 
-    <!-- Thumbnail Image -->
+    <!-- Thumbnail Image (Rendered directly with no opacity-0 so cached or fresh images are always visible) -->
     <img
       v-if="item.thumbUrl && !imageError"
       :src="item.thumbUrl"
       :alt="item.type === 'video' ? 'Cuplikan video' : 'Foto kenangan'"
       loading="lazy"
-      class="w-full h-full object-cover transition-transform duration-300"
+      decoding="async"
+      class="w-full h-full object-cover transition-transform duration-300 relative z-10"
       :class="{
-        'opacity-0': !imageLoaded,
-        'opacity-100': imageLoaded,
         'brightness-90': isSelected,
       }"
       @load="imageLoaded = true"
       @error="imageError = true"
     />
+
+    <!-- Fallback if thumbnail missing or error -->
+    <div
+      v-else-if="imageError || !item.thumbUrl"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-surface-tint text-muted gap-1 text-center p-2 z-10"
+    >
+      <ImageIcon class="w-6 h-6 text-muted/60" />
+      <span class="text-[9px] text-muted/80">Foto</span>
+    </div>
 
     <!-- Multi-select overlay badge (appears during selection mode or when selected) -->
     <div
@@ -127,6 +138,14 @@ function formatDuration(sec?: number): string {
       >
         <Check v-if="isSelected" class="w-3.5 h-3.5 stroke-3" />
       </div>
+    </div>
+
+    <!-- Favorite indicator badge (small heart) -->
+    <div
+      v-if="isFavorite(item.id) && !isSelectionMode"
+      class="absolute top-1.5 right-1.5 z-10 w-5 h-5 rounded-full bg-black/40 backdrop-blur-xs flex items-center justify-center text-[#FF8FAE] pointer-events-none shadow-xs"
+    >
+      <Heart class="w-3 h-3 fill-current" />
     </div>
 
     <!-- Video duration badge -->

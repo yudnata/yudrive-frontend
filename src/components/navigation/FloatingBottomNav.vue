@@ -16,7 +16,13 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', tab: NavTab): void;
+  (e: 'tab-click', tab: NavTab): void;
 }>();
+
+function selectTab(tab: NavTab) {
+  emit('tab-click', tab);
+  emit('update:modelValue', tab);
+}
 </script>
 
 <template>
@@ -34,7 +40,7 @@ const emit = defineEmits<{
         class="flex-1 min-h-11 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
         :class="modelValue === 'home' ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold' : 'text-muted hover:text-app'"
         aria-label="Beranda kenangan"
-        @click="emit('update:modelValue', 'home')"
+        @click="selectTab('home')"
       >
         <Home class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'home' }" />
         <span class="text-[9.5px] sm:text-[10px] tracking-tight">Beranda</span>
@@ -46,7 +52,7 @@ const emit = defineEmits<{
         class="flex-1 min-h-11 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
         :class="modelValue === 'folders' ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold' : 'text-muted hover:text-app'"
         aria-label="Jelajah folder kenangan"
-        @click="emit('update:modelValue', 'folders')"
+        @click="selectTab('folders')"
       >
         <FolderIcon class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'folders' }" />
         <span class="text-[9.5px] sm:text-[10px] tracking-tight">Folder</span>
@@ -58,7 +64,7 @@ const emit = defineEmits<{
         class="flex-1 min-h-11 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
         :class="modelValue === 'calendar' ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold' : 'text-muted hover:text-app'"
         aria-label="Kalender momen dan kenangan"
-        @click="emit('update:modelValue', 'calendar')"
+        @click="selectTab('calendar')"
       >
         <CalendarHeart class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'calendar' }" />
         <span class="text-[9.5px] sm:text-[10px] tracking-tight">Kalender</span>
@@ -70,7 +76,7 @@ const emit = defineEmits<{
         class="flex-1 min-h-11 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
         :class="modelValue === 'gallery' ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold' : 'text-muted hover:text-app'"
         aria-label="Galeri semua foto dan video"
-        @click="emit('update:modelValue', 'gallery')"
+        @click="selectTab('gallery')"
       >
         <Images class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'gallery' }" />
         <span class="text-[9.5px] sm:text-[10px] tracking-tight">Galeri</span>
@@ -82,19 +88,13 @@ const emit = defineEmits<{
         class="flex-1 min-h-11 flex flex-col items-center justify-center gap-0.5 rounded-full transition-all cursor-pointer relative py-1"
         :class="modelValue === 'favorites' ? 'text-[#C93D68] dark:text-[#FF8FAE] font-bold' : 'text-muted hover:text-app'"
         aria-label="Kenangan favorit"
-        @click="emit('update:modelValue', 'favorites')"
+        @click="selectTab('favorites')"
       >
         <div class="relative">
           <Heart
             class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform"
             :class="{ 'scale-110 fill-current': modelValue === 'favorites' }"
           />
-          <span
-            v-if="favoriteCount && favoriteCount > 0"
-            class="absolute -top-1 -right-2 px-1 py-0.2 rounded-full bg-[#C93D68] text-white text-[9px] font-bold"
-          >
-            {{ favoriteCount > 99 ? '99+' : favoriteCount }}
-          </span>
         </div>
         <span class="text-[9.5px] sm:text-[10px] tracking-tight">Favorit</span>
       </button>

@@ -2,7 +2,6 @@
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useSwipe } from '@vueuse/core';
 import { useViewerStore } from '../stores/viewer.store';
-import { useGalleryStore } from '@/features/gallery/stores/gallery.store';
 import { useFavorites } from '@/features/gallery/composables/useFavorites';
 import { useToast } from '@/composables/useToast';
 import CustomVideoPlayer from './CustomVideoPlayer.vue';
@@ -21,7 +20,6 @@ import {
 } from 'lucide-vue-next';
 
 const viewerStore = useViewerStore();
-const galleryStore = useGalleryStore();
 const { isFavorite, toggleFavorite } = useFavorites();
 const toast = useToast();
 
@@ -41,9 +39,10 @@ function handleToggleFavorite() {
   }
 }
 
-// Touch swipe navigation for mobile
+// Touch swipe navigation for mobile (only active when not zoomed in)
 const { direction } = useSwipe(stageRef, {
   onSwipeEnd() {
+    if (scale.value > 1.05 || isPinching.value) return;
     if (direction.value === 'left' && viewerStore.hasNext) {
       viewerStore.next();
     } else if (direction.value === 'right' && viewerStore.hasPrev) {
@@ -52,9 +51,150 @@ const { direction } = useSwipe(stageRef, {
   },
 });
 
+// Mobile Pinch-To-Zoom and Pan states
+const scale = ref(1);
+const translateX = ref(0);
+const translateY = ref(0);
+const isPinching = ref(false);
+const isPanning = ref(false);
+const isGestureMoved = ref(false);
+
+let startDistance = 0;
+let initialScale = 1;
+let startX = 0;
+let startY = 0;
+let initialTranslateX = 0;
+let initialTranslateY = 0;
+let lastTapTime = 0;
+
+function resetZoom() {
+  scale.value = 1;
+  translateX.value = 0;
+  translateY.value = 0;
+  isPinching.value = false;
+  isPanning.value = false;
+}
+
+function handleTouchStart(e: TouchEvent) {
+  if (e.touches.length === 2) {
+    // Two fingers: Pinch start!
+    isPinching.value = true;
+    isPanning.value = false;
+    isGestureMoved.value = true;
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    startDistance = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    initialScale = scale.value;
+  } else if (e.touches.length === 1) {
+    const touch = e.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    initialTranslateX = translateX.value;
+    initialTranslateY = translateY.value;
+    isGestureMoved.value = false;
+
+    // Double tap check
+    const now = Date.now();
+    if (now - lastTapTime < 300) {
+      lastTapTime = 0;
+      if (scale.value > 1.1) {
+        resetZoom();
+      } else {
+        scale.value = 2.5;
+        translateX.value = 0;
+        translateY.value = 0;
+      }
+      return;
+    }
+    lastTapTime = now;
+
+    if (scale.value > 1.05) {
+      isPanning.value = true;
+    }
+  }
+}
+
+function handleTouchMove(e: TouchEvent) {
+  if (e.touches.length === 2 && isPinching.value) {
+    e.preventDefault();
+    const t1 = e.touches[0];
+    const t2 = e.touches[1];
+    const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+    if (startDistance > 0) {
+      const factor = dist / startDistance;
+      const nextScale = Math.min(Math.max(initialScale * factor, 0.8), 4.5);
+      scale.value = nextScale;
+    }
+  } else if (e.touches.length === 1 && isPanning.value && scale.value > 1.05) {
+    e.preventDefault();
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - startX;
+    const deltaY = touch.clientY - startY;
+    if (Math.abs(deltaX) > 6 || Math.abs(deltaY) > 6) {
+      isGestureMoved.value = true;
+    }
+    const maxBoundX = (window.innerWidth * (scale.value - 1)) / 1.8;
+    const maxBoundY = (window.innerHeight * (scale.value - 1)) / 1.8;
+    translateX.value = Math.max(-maxBoundX, Math.min(maxBoundX, initialTranslateX + deltaX));
+    translateY.value = Math.max(-maxBoundY, Math.min(maxBoundY, initialTranslateY + deltaY));
+  }
+}
+
+function handleTouchEnd(e: TouchEvent) {
+  if (e.touches.length === 0) {
+    if (scale.value < 1.05) {
+      resetZoom();
+    }
+    isPinching.value = false;
+    isPanning.value = false;
+  } else if (e.touches.length === 1) {
+    isPinching.value = false;
+    if (scale.value > 1.05) {
+      isPanning.value = true;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      initialTranslateX = translateX.value;
+      initialTranslateY = translateY.value;
+    }
+  }
+}
+
+function handlePhotoClick() {
+  const now = Date.now();
+  if (now - lastTapTime < 300) {
+    lastTapTime = 0;
+    if (scale.value > 1.1) {
+      resetZoom();
+    } else {
+      scale.value = 2.5;
+      translateX.value = 0;
+      translateY.value = 0;
+    }
+    return;
+  }
+  lastTapTime = now;
+}
+
+function handleBackdropClick(e: MouseEvent) {
+  if (isGestureMoved.value) {
+    isGestureMoved.value = false;
+    return;
+  }
+  const target = e.target as HTMLElement;
+  const isDirectBackdrop = target === stageRef.value || target.classList.contains('backdrop-area');
+  if (isDirectBackdrop) {
+    if (scale.value > 1.05) {
+      resetZoom();
+    } else {
+      handleClose();
+    }
+  }
+}
+
 let isHandlingPopState = false;
 
 function handleClose() {
+  resetZoom();
   if (!isHandlingPopState && window.history.state?.modal === 'lightbox') {
     window.history.back();
   } else {
@@ -137,32 +277,67 @@ function formatDate(iso?: string): string {
 }
 
 const usedThumbFallback = ref(false);
+const refreshAttempted = ref(false);
 
 const activeDisplayUrl = computed(() => {
-  if (usedThumbFallback.value && viewerStore.activeItem?.thumbUrl) {
-    return viewerStore.activeItem.thumbUrl;
+  const item = viewerStore.activeItem;
+  const thumb = item?.thumbUrl || viewerStore.activeThumbUrl;
+
+  // Proactively display thumbUrl for HEIC/HEIF files because browsers cannot display raw HEIC natively
+  const isHeic =
+    item?.mime === 'image/heic' ||
+    viewerStore.activeMime === 'image/heic' ||
+    item?.filename?.toLowerCase().endsWith('.heic') ||
+    viewerStore.activeFilename?.toLowerCase().endsWith('.heic');
+
+  // Browsers cannot display raw HEIC. Always use the WebP thumbnail preview for HEIC.
+  if (isHeic) {
+    return thumb || null;
   }
-  return viewerStore.activeUrl;
+
+  if (usedThumbFallback.value && thumb) {
+    return thumb;
+  }
+
+  return viewerStore.activeUrl || thumb || null;
 });
 
 function handleImageError() {
-  if (!usedThumbFallback.value && viewerStore.activeItem?.thumbUrl) {
+  const thumb = viewerStore.activeItem?.thumbUrl || viewerStore.activeThumbUrl;
+  if (!usedThumbFallback.value && thumb) {
     usedThumbFallback.value = true;
     return;
   }
+
+  // Flag error so user sees the reload card
   imageError.value = true;
-  // Attempt auto-refresh once on 403 expired URL
-  viewerStore.refreshExpiredUrl().then(() => {
-    imageError.value = false;
-  }).catch(() => {});
+
+  // Only auto-retry ONCE to avoid infinite loops on unrenderable media
+  if (!refreshAttempted.value) {
+    refreshAttempted.value = true;
+    viewerStore.refreshExpiredUrl().catch(() => {});
+  }
 }
 
-// Reset image error on media change
+async function handleManualRefresh() {
+  imageError.value = false;
+  usedThumbFallback.value = false;
+  refreshAttempted.value = false;
+  try {
+    await viewerStore.refreshExpiredUrl();
+  } catch {
+    imageError.value = true;
+  }
+}
+
+// Reset image error and zoom on media change
 watch(
   () => viewerStore.currentMediaId,
   () => {
     usedThumbFallback.value = false;
     imageError.value = false;
+    refreshAttempted.value = false;
+    resetZoom();
   }
 );
 
@@ -206,7 +381,7 @@ onUnmounted(() => {
             <!-- Counter & Date -->
             <div class="overflow-hidden">
               <p class="text-xs font-medium text-white/90 truncate">
-                {{ viewerStore.currentIndex + 1 }} dari {{ galleryStore.items.length }}
+                {{ viewerStore.currentIndex + 1 }} dari {{ viewerStore.totalItems }}
               </p>
               <p
                 v-if="viewerStore.activeItem?.takenAt"
@@ -270,7 +445,8 @@ onUnmounted(() => {
         <!-- Center Stage: Photo or Custom Video Player -->
         <main
           ref="stageRef"
-          class="relative flex-1 w-full flex items-center justify-center p-2 sm:p-6 overflow-hidden"
+          class="relative flex-1 w-full flex items-center justify-center p-2 sm:p-6 overflow-hidden cursor-zoom-out"
+          @click="handleBackdropClick"
         >
           <!-- Left Arrow (Desktop / Tablet) -->
           <button
@@ -278,7 +454,7 @@ onUnmounted(() => {
             type="button"
             class="hidden sm:flex absolute left-4 z-20 w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 text-white/90 items-center justify-center backdrop-blur-xs transition-transform hover:scale-110 active:scale-95"
             aria-label="Kenangan sebelumnya"
-            @click="viewerStore.prev"
+            @click.stop="viewerStore.prev"
           >
             <ChevronLeft class="w-6 h-6 -ml-0.5" />
           </button>
@@ -289,57 +465,91 @@ onUnmounted(() => {
             type="button"
             class="hidden sm:flex absolute right-4 z-20 w-11 h-11 rounded-full bg-black/40 hover:bg-black/60 text-white/90 items-center justify-center backdrop-blur-xs transition-transform hover:scale-110 active:scale-95"
             aria-label="Kenangan berikutnya"
-            @click="viewerStore.next"
+            @click.stop="viewerStore.next"
           >
             <ChevronRight class="w-6 h-6 ml-0.5" />
           </button>
 
-          <!-- Loading Indicator -->
-          <div
-            v-if="viewerStore.isLoadingUrl"
-            class="flex flex-col items-center gap-3 text-white/80"
-          >
-            <div class="w-8 h-8 rounded-full border-2 border-[#FF8FAE] border-t-transparent animate-spin" />
-            <span class="text-xs">Memuat kenangan...</span>
-          </div>
-
-          <!-- Video Player -->
-          <CustomVideoPlayer
-            v-else-if="viewerStore.activeItem?.type === 'video' && viewerStore.activeUrl"
-            :src="viewerStore.activeUrl"
-            :poster="viewerStore.activeItem.thumbUrl"
-            :filename="viewerStore.activeFilename || undefined"
-            @expired="viewerStore.refreshExpiredUrl"
-          />
-
-          <!-- Photo View -->
-          <div
-            v-else-if="viewerStore.activeUrl"
-            class="relative max-w-full max-h-full flex items-center justify-center"
-          >
-            <img
-              :src="activeDisplayUrl || undefined"
-              :alt="viewerStore.activeFilename || 'Foto kenangan'"
-              class="max-w-full max-h-[82vh] object-contain rounded-[14px] shadow-2xl transition-all"
-              @error="handleImageError"
-            />
-          </div>
-
-          <!-- Image Error Fallback -->
+          <!-- 1. Error Fallback (mutually exclusive) -->
           <div
             v-if="imageError"
-            class="text-center p-6 text-white"
+            class="text-center p-6 text-white max-w-sm z-10"
           >
             <p class="text-sm mb-3 text-white/80">
               Gagal memuat gambar atau tautan telah kedaluwarsa.
             </p>
             <button
               type="button"
-              class="btn-primary px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5"
-              @click="viewerStore.refreshExpiredUrl"
+              class="btn-primary px-4 py-2 text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer"
+              @click="handleManualRefresh"
             >
-              <RotateCw class="w-3.5 h-3.5" />
+              <RotateCw class="w-3.5 h-3.5" :class="{ 'animate-spin': viewerStore.isLoadingUrl }" />
               Perbarui Tautan
+            </button>
+          </div>
+
+          <!-- 2. Loading Indicator (mutually exclusive) -->
+          <div
+            v-else-if="viewerStore.isLoadingUrl && !activeDisplayUrl"
+            class="flex flex-col items-center gap-3 text-white/80"
+          >
+            <div class="w-8 h-8 rounded-full border-2 border-[#FF8FAE] border-t-transparent animate-spin" />
+            <span class="text-xs">Memuat kenangan...</span>
+          </div>
+
+          <!-- 3. Video Player (mutually exclusive) -->
+          <CustomVideoPlayer
+            v-else-if="viewerStore.activeItem?.type === 'video' && viewerStore.activeUrl"
+            :src="viewerStore.activeUrl"
+            :poster="viewerStore.activeItem.thumbUrl || viewerStore.activeThumbUrl || undefined"
+            :filename="viewerStore.activeFilename || undefined"
+            @expired="viewerStore.refreshExpiredUrl"
+            @click.stop
+          />
+
+          <!-- 4. Photo View with Pinch-to-Zoom & Pan (mutually exclusive) -->
+          <div
+            v-else-if="activeDisplayUrl"
+            class="relative max-w-full max-h-full flex items-center justify-center touch-none select-none cursor-default"
+            :style="{
+              transform: `translate3d(${translateX}px, ${translateY}px, 0) scale(${scale})`,
+              transition: isPinching || isPanning ? 'none' : 'transform 0.2s cubic-bezier(0.2, 0, 0, 1)',
+            }"
+            @touchstart="handleTouchStart"
+            @touchmove="handleTouchMove"
+            @touchend="handleTouchEnd"
+            @touchcancel="handleTouchEnd"
+            @click.stop="handlePhotoClick"
+          >
+            <img
+              :src="activeDisplayUrl"
+              :alt="viewerStore.activeFilename || 'Foto kenangan'"
+              class="max-w-full max-h-[82vh] object-contain rounded-[14px] shadow-2xl pointer-events-none select-none"
+              draggable="false"
+              @error="handleImageError"
+            />
+          </div>
+
+          <!-- Fallback when loading -->
+          <div
+            v-else
+            class="flex flex-col items-center gap-3 text-white/80"
+          >
+            <div class="w-8 h-8 rounded-full border-2 border-[#FF8FAE] border-t-transparent animate-spin" />
+            <span class="text-xs">Memuat kenangan...</span>
+          </div>
+
+          <!-- Zoom Reset Pill Indicator (Floating Overlay) -->
+          <div
+            v-if="scale > 1.15 && !imageError"
+            class="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto"
+          >
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/80 backdrop-blur-md text-white text-xs font-medium flex items-center gap-1.5 shadow-lg active:scale-95 transition-all cursor-pointer"
+              @click.stop="resetZoom"
+            >
+              <span>{{ Math.round(scale * 100) }}% • Ketuk untuk reset</span>
             </button>
           </div>
         </main>

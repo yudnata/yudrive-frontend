@@ -1,4 +1,5 @@
 import { apiFetch } from '@/services/api';
+import { MediaItem } from '@/types';
 import {
   savePersistedUpload,
   deletePersistedUpload,
@@ -80,16 +81,20 @@ function uploadSingleFileViaXhr(
   });
 }
 
-// Upload thumbnail directly to R2
+// Upload thumbnail directly to R2 (non-blocking, server will generate if client fails)
 async function uploadThumbnail(thumbUrl: string, thumbBlob: Blob): Promise<void> {
-  const res = await fetch(thumbUrl, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'image/webp' },
-    body: thumbBlob,
-  });
+  try {
+    const res = await fetch(thumbUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'image/webp' },
+      body: thumbBlob,
+    });
 
-  if (!res.ok) {
-    throw new Error('Gagal mengunggah thumbnail ke storage.');
+    if (!res.ok) {
+      console.warn('Gagal mengunggah thumbnail ke storage (non-fatal), status:', res.status);
+    }
+  } catch (err) {
+    console.warn('Thumbnail upload non-fatal error:', err);
   }
 }
 
@@ -102,7 +107,7 @@ export class DirectR2Uploader {
     media: ProcessedMedia,
     onProgress: UploadProgressCallback,
     folderId?: string | null
-  ): Promise<string> {
+  ): Promise<{ mediaId: string; media?: MediaItem }> {
     const abortCtrl = new AbortController();
     this.activeUploads.set(taskId, abortCtrl);
 
@@ -226,7 +231,12 @@ export class DirectR2Uploader {
 
       // 4. Call POST /uploads/complete
       onProgress(95, 'Memverifikasi file di server...');
-      await apiFetch('/uploads/complete', {
+      const completeRes = await apiFetch<{
+        success: boolean;
+        mediaId: string;
+        status: string;
+        media?: MediaItem;
+      }>('/uploads/complete', {
         method: 'POST',
         body: JSON.stringify({
           mediaId: initRes.mediaId,
@@ -239,7 +249,10 @@ export class DirectR2Uploader {
       await savePersistedUpload(persisted);
 
       onProgress(100, 'Selesai!');
-      return initRes.mediaId;
+      return {
+        mediaId: initRes.mediaId,
+        media: completeRes.media,
+      };
     } catch (err: any) {
       persisted.status = 'failed';
       await savePersistedUpload(persisted);

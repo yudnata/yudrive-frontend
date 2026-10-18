@@ -8,6 +8,7 @@ import {
   clearCompletedPersistedUploads,
 } from '../utils/indexed-db';
 import { useGalleryStore } from '@/features/gallery/stores/gallery.store';
+import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useToast } from '@/composables/useToast';
 
@@ -37,6 +38,17 @@ export const useUploadStore = defineStore('upload', () => {
   );
   const hasTasks = computed(() => tasks.value.length > 0);
 
+  // Automatically remove completed task from memory & IndexedDB
+  function autoRemoveCompleted(taskId: string, delayMs = 1200) {
+    setTimeout(async () => {
+      tasks.value = tasks.value.filter((t) => t.id !== taskId);
+      await deletePersistedUpload(taskId).catch(() => {});
+      if (tasks.value.length === 0) {
+        isPanelOpen.value = false;
+      }
+    }, delayMs);
+  }
+
   // Load any unfinished uploads from IndexedDB on startup
   async function loadPersistedState() {
     try {
@@ -61,15 +73,26 @@ export const useUploadStore = defineStore('upload', () => {
   }
 
   // Add selected files to the queue
-  async function addFiles(fileList: FileList | File[], folderId?: string | null) {
+  function addFiles(fileList: FileList | File[], folderId?: string | null) {
     const files = Array.from(fileList);
     if (files.length === 0) return;
+
+    console.log('[UploadStore] addFiles dipanggil dengan', files.length, 'file. Folder ID:', folderId);
+
+    // Clear already finished tasks before queuing new ones
+    tasks.value = tasks.value.filter((t) => t.status !== 'completed' && t.status !== 'canceled');
+    clearCompletedPersistedUploads().catch(() => {});
 
     isPanelOpen.value = true;
 
     for (const file of files) {
       const id = Math.random().toString(36).substring(2, 9);
-      const thumbPreviewUrl = URL.createObjectURL(file);
+      let thumbPreviewUrl = '';
+      try {
+        thumbPreviewUrl = URL.createObjectURL(file);
+      } catch (e) {
+        console.warn('Gagal membuat preview URL:', e);
+      }
 
       const task: UploadTask = {
         id,
@@ -102,6 +125,7 @@ export const useUploadStore = defineStore('upload', () => {
     const nextTask = tasks.value.find((t) => t.status === 'queued');
     if (!nextTask || !nextTask.file) return;
 
+    console.log('[UploadStore] Memproses file:', nextTask.filename, 'ID:', nextTask.id);
     nextTask.status = 'processing';
     nextTask.statusText = 'Mempersiapkan metadata & thumbnail...';
 
@@ -122,7 +146,7 @@ export const useUploadStore = defineStore('upload', () => {
 
       // 2. Direct upload to R2
       nextTask.status = 'uploading';
-      const mediaId = await directR2Uploader.upload(
+      const uploadResult = await directR2Uploader.upload(
         nextTask.id,
         processed,
         (percent, statusText) => {
@@ -132,14 +156,39 @@ export const useUploadStore = defineStore('upload', () => {
         nextTask.folderId
       );
 
-      nextTask.mediaId = mediaId;
+      nextTask.mediaId = uploadResult.mediaId;
       nextTask.status = 'completed';
       nextTask.statusText = 'Berhasil diunggah!';
       nextTask.progress = 100;
 
-      // Refresh gallery and storage quota
-      galleryStore.fetchMedia(true, nextTask.folderId).catch(() => {});
+      // Non-intrusive quota update in background
       authStore.fetchMe().catch(() => {});
+
+      // Non-destructive memory update:
+      // Prepend newly uploaded media item directly into gallery store.
+      // - If user is on 'gallery' tab, it immediately appears in its folder group without wiping any existing images or folders.
+      // - If user is inside the uploaded folder (e.g. Folder A), currentFolderItems reactively includes it at the top.
+      // - If user is inside a different folder (e.g. Folder B), it is filtered out and Folder B remains 100% untouched.
+      if (uploadResult.media) {
+        if (!galleryStore.activeFolderFilter || galleryStore.activeFolderFilter === nextTask.folderId) {
+          galleryStore.prependItem(uploadResult.media);
+        }
+      }
+
+      // Update folder metadata (e.g. cover & count) reactively without wiping
+      if (nextTask.folderId) {
+        const folderStore = useFolderStore();
+        const targetFolder = folderStore.folders.find((f) => f.id === nextTask.folderId);
+        if (targetFolder) {
+          targetFolder.itemCount = (targetFolder.itemCount || 0) + 1;
+          if (!targetFolder.coverUrl && uploadResult.media?.thumbUrl) {
+            targetFolder.coverUrl = uploadResult.media.thumbUrl;
+          }
+        }
+      }
+
+      // Automatically clean up and remove completed task from queue after brief delay
+      autoRemoveCompleted(nextTask.id);
     } catch (err: any) {
       console.error('Upload failed for task', nextTask.id, err);
       nextTask.status = 'failed';
