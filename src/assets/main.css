@@ -92,6 +92,30 @@
   border-color: var(--border);
 }
 
+.shadow-soft {
+  box-shadow: var(--shadow);
+}
+
+.shadow-soft-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.glass-nav {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.photo-card {
+  transition: transform 200ms ease-out, box-shadow 200ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .photo-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: #ffffff;
@@ -107,6 +131,31 @@
 
 .btn-primary:active {
   transform: translateY(0);
+}
+
+/* Pink-tinted skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(90deg, var(--surface-tint) 25%, var(--primary-soft) 50%, var(--surface-tint) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
+
+/* Mobile safe area padding */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+}
+
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top, 0px));
 }
 
 @media (prefers-reduced-motion: reduce) {

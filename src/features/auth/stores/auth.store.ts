@@ -1,0 +1,80 @@
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+import { User, StorageUsage } from '@/types';
+import { apiFetch, ApiError } from '@/services/api';
+
+export const useAuthStore = defineStore('auth', () => {
+  const token = ref<string | null>(localStorage.getItem('auth_token'));
+  const user = ref<User | null>(null);
+  const usage = ref<StorageUsage | null>(null);
+  const isLoading = ref(false);
+  const isColdStarting = ref(false);
+
+  const isAuthenticated = computed(() => !!token.value);
+
+  async function login(email: string, password: string): Promise<void> {
+    isLoading.value = true;
+    try {
+      const data = await apiFetch<{ token: string; user: User }>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email, password }),
+      });
+
+      token.value = data.token;
+      user.value = data.user;
+      localStorage.setItem('auth_token', data.token);
+
+      await fetchMe();
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  async function fetchMe(): Promise<void> {
+    if (!token.value) return;
+
+    isLoading.value = true;
+    isColdStarting.value = false;
+
+    // Detect if server is in Azure cold start (request takes > 2.5s)
+    const coldStartTimer = setTimeout(() => {
+      if (isLoading.value) {
+        isColdStarting.value = true;
+      }
+    }, 2500);
+
+    try {
+      const data = await apiFetch<{ user: User; usage: StorageUsage }>('/me');
+      user.value = data.user;
+      usage.value = data.usage;
+    } catch (err: any) {
+      if (err instanceof ApiError && err.statusCode === 401) {
+        logout();
+      }
+      throw err;
+    } finally {
+      clearTimeout(coldStartTimer);
+      isLoading.value = false;
+      isColdStarting.value = false;
+    }
+  }
+
+  function logout(): void {
+    token.value = null;
+    user.value = null;
+    usage.value = null;
+    localStorage.removeItem('auth_token');
+  }
+
+  return {
+    token,
+    user,
+    usage,
+    isLoading,
+    isColdStarting,
+    isAuthenticated,
+    login,
+    fetchMe,
+    logout,
+  };
+});
