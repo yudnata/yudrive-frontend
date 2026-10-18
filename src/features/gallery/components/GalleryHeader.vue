@@ -44,13 +44,13 @@ function formatBytes(bytes?: number): string {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 w-full bg-surface shadow-xs border-b border-black/[0.04] dark:border-white/[0.06] transition-colors">
+  <header class="sticky top-0 z-30 w-full bg-surface shadow-xs border-b border-black/4 dark:border-white/6 transition-colors">
     <div class="max-w-6xl mx-auto px-4 h-12 sm:h-13 flex items-center justify-between">
       <!-- Logo: Bare heart icon without background container -->
       <div class="flex items-center gap-1.5 sm:gap-2">
         <Heart class="w-4.5 h-4.5 sm:w-5 sm:h-5 fill-current text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
         <span class="text-base sm:text-lg font-semibold font-serif tracking-tight text-[#C93D68] dark:text-[#FF8FAE]">
-          Yudhi & Wina
+          Momento
         </span>
       </div>
 
