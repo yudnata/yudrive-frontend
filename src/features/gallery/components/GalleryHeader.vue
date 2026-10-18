@@ -44,12 +44,12 @@ function formatBytes(bytes?: number): string {
 </script>
 
 <template>
-  <header class="sticky top-0 z-30 w-full glass-nav bg-surface/90 backdrop-blur-md shadow-sm transition-colors">
-    <div class="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+  <header class="sticky top-0 z-30 w-full bg-white dark:bg-surface shadow-xs border-b border-black/[0.04] dark:border-white/[0.06] transition-colors">
+    <div class="max-w-6xl mx-auto px-4 h-12 sm:h-13 flex items-center justify-between">
       <!-- Logo: Bare heart icon without background container -->
-      <div class="flex items-center gap-2">
-        <Heart class="w-6 h-6 fill-current text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
-        <span class="text-xl font-semibold font-serif tracking-tight text-[#C93D68] dark:text-[#FF8FAE]">
+      <div class="flex items-center gap-1.5 sm:gap-2">
+        <Heart class="w-4.5 h-4.5 sm:w-5 sm:h-5 fill-current text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
+        <span class="text-base sm:text-lg font-semibold font-serif tracking-tight text-[#C93D68] dark:text-[#FF8FAE]">
           Yudhi & Wina
         </span>
       </div>
@@ -58,18 +58,18 @@ function formatBytes(bytes?: number): string {
       <div ref="profileMenuRef" class="relative">
         <button
           type="button"
-          class="relative flex items-center gap-2 p-1 rounded-full shadow-sm hover:shadow hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] min-h-11 min-w-11 transition-all cursor-pointer"
+          class="relative flex items-center justify-center p-0.5 rounded-full shadow-xs hover:shadow-sm hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] transition-all cursor-pointer"
           aria-label="Menu profil dan pengaturan tampilan"
           @click="isMenuOpen = !isMenuOpen"
         >
-          <div class="w-9 h-9 rounded-full bg-surface-tint flex items-center justify-center text-xs font-bold text-[#C93D68] dark:text-[#FF8FAE]">
+          <div class="w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full bg-surface-tint flex items-center justify-center text-xs font-bold text-[#C93D68] dark:text-[#FF8FAE]">
             {{ authStore.user?.name ? authStore.user.name.charAt(0).toUpperCase() : 'U' }}
           </div>
 
           <!-- Quota alert badge on avatar button if >= 80% -->
           <span
             v-if="(authStore.usage?.percentage || 0) >= 80"
-            class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#D64545] border-2 border-surface"
+            class="absolute top-0 right-0 w-2.5 h-2.5 rounded-full bg-[#D64545] border-2 border-white dark:border-surface"
             aria-label="Penyimpanan hampir penuh"
           />
         </button>
