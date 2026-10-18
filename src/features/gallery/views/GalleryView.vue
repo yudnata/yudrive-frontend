@@ -252,11 +252,7 @@ onMounted(async () => {
     <!-- Main Explorer / Gallery Container -->
     <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6">
       <!-- HERO SECTION AT TOP -->
-      <GalleryHero
-        v-if="!folderStore.currentFolder"
-        @create-folder="handleOpenCreateFolder"
-        @upload="handleEmptyUpload"
-      />
+      <GalleryHero v-if="!folderStore.currentFolder" />
 
       <!-- Breadcrumb Navigation Bar (Windows Explorer Style, Shadow-based) -->
       <nav
