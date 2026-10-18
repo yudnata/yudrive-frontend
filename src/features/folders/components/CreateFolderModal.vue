@@ -49,14 +49,12 @@ function handleSubmit() {
       aria-modal="true"
     >
       <div
-        class="w-full max-w-sm rounded-3xl bg-surface border border-app shadow-soft p-6 sm:p-7 text-left transform transition-all"
+        class="w-full max-w-sm rounded-3xl bg-surface shadow-2xl p-6 sm:p-7 text-left transform transition-all"
         @click.stop
       >
         <div class="flex items-center justify-between mb-5">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-surface-tint flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE]">
-              <FolderPlus class="w-5 h-5" />
-            </div>
+            <FolderPlus class="w-6 h-6 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
             <h2 class="text-base font-serif font-semibold text-app tracking-tight">
               {{ isRenaming ? 'Ubah Nama Folder' : 'Buat Folder Baru' }}
             </h2>

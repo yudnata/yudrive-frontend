@@ -92,15 +92,13 @@ async function handleRemoveCover() {
       aria-modal="true"
     >
       <div
-        class="w-full max-w-md rounded-3xl bg-surface border border-app shadow-soft p-6 sm:p-7 text-left max-h-[90vh] flex flex-col"
+        class="w-full max-w-md rounded-3xl bg-surface shadow-2xl p-6 sm:p-7 text-left max-h-[90vh] flex flex-col"
         @click.stop
       >
-        <!-- Modal Header -->
-        <div class="flex items-center justify-between pb-4 border-b border-app">
+        <!-- Modal Header: Bare Icon -->
+        <div class="flex items-center justify-between pb-4 border-b border-transparent">
           <div class="flex items-center gap-2.5">
-            <div class="w-9 h-9 rounded-xl bg-surface-tint flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE]">
-              <Info class="w-5 h-5" />
-            </div>
+            <Info class="w-6 h-6 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
             <div>
               <h2 class="text-base font-serif font-semibold text-app tracking-tight truncate max-w-60">
                 {{ folder.name }}
@@ -126,7 +124,7 @@ async function handleRemoveCover() {
               Foto Sampul Folder
             </label>
 
-            <div class="relative w-full aspect-video rounded-2xl bg-surface-tint border border-app overflow-hidden flex items-center justify-center">
+            <div class="relative w-full aspect-video rounded-2xl bg-surface-tint overflow-hidden flex items-center justify-center shadow-sm">
               <img
                 v-if="folder.coverUrl"
                 :src="folder.coverUrl"
@@ -166,7 +164,7 @@ async function handleRemoveCover() {
           <!-- Cover Photo Picker Grid -->
           <div
             v-if="isSelectingCover"
-            class="p-3 rounded-2xl bg-surface-tint border border-app space-y-2"
+            class="p-3 rounded-2xl bg-surface-tint shadow-sm space-y-2"
           >
             <p class="text-xs font-semibold text-app">
               Pilih satu foto dari isi folder ini:
@@ -190,7 +188,7 @@ async function handleRemoveCover() {
               <div
                 v-for="photo in folderPhotos"
                 :key="photo.id"
-                class="relative aspect-square rounded-xl overflow-hidden border border-app cursor-pointer group"
+                class="relative aspect-square rounded-xl overflow-hidden shadow-xs cursor-pointer group"
                 @click="handleChooseCover(photo)"
               >
                 <img
@@ -210,7 +208,7 @@ async function handleRemoveCover() {
 
           <!-- Information List -->
           <div class="space-y-3 pt-2">
-            <div class="flex items-center justify-between text-xs py-1.5 border-b border-app">
+            <div class="flex items-center justify-between text-xs py-1.5 border-b border-transparent">
               <span class="flex items-center gap-2 text-muted">
                 <Files class="w-3.5 h-3.5" />
                 Jumlah File
@@ -218,7 +216,7 @@ async function handleRemoveCover() {
               <span class="font-semibold text-app">{{ folder.itemCount }} item</span>
             </div>
 
-            <div class="flex items-center justify-between text-xs py-1.5 border-b border-app">
+            <div class="flex items-center justify-between text-xs py-1.5 border-b border-transparent">
               <span class="flex items-center gap-2 text-muted">
                 <HardDrive class="w-3.5 h-3.5" />
                 Ukuran Total
@@ -226,7 +224,7 @@ async function handleRemoveCover() {
               <span class="font-semibold text-app">{{ formatBytes(folder.totalBytes) }}</span>
             </div>
 
-            <div class="flex items-center justify-between text-xs py-1.5 border-b border-app">
+            <div class="flex items-center justify-between text-xs py-1.5 border-b border-transparent">
               <span class="flex items-center gap-2 text-muted">
                 <Calendar class="w-3.5 h-3.5" />
                 Tanggal Dibuat
@@ -237,7 +235,7 @@ async function handleRemoveCover() {
         </div>
 
         <!-- Footer -->
-        <div class="pt-3 border-t border-app flex justify-end">
+        <div class="pt-3 border-t border-transparent flex justify-end">
           <Button
             type="button"
             variant="primary"

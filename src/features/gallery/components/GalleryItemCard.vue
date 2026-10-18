@@ -26,7 +26,7 @@ function formatDuration(sec?: number): string {
 <template>
   <button
     type="button"
-    class="group relative aspect-square w-full rounded-[14px] overflow-hidden bg-surface-tint border border-app/60 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] photo-card"
+    class="group relative aspect-square w-full rounded-[14px] overflow-hidden bg-surface-tint shadow-sm text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] photo-card cursor-pointer"
     :aria-label="item.type === 'video' ? 'Putar video kenangan' : 'Lihat foto kenangan'"
     @click="$emit('click', item)"
   >

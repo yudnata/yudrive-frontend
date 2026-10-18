@@ -47,11 +47,10 @@ onUnmounted(() => {
         aria-labelledby="delete-modal-title"
       >
         <div
-          class="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-surface border border-app shadow-soft text-center transform transition-all"
+          class="w-full max-w-sm p-6 sm:p-8 rounded-3xl bg-surface shadow-2xl text-center transform transition-all"
         >
-          <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-[#D64545]/15 text-[#D64545] flex items-center justify-center">
-            <Trash2 class="w-6 h-6" />
-          </div>
+          <!-- Bare Trash Icon (No background container) -->
+          <Trash2 class="w-10 h-10 mx-auto mb-3 text-[#D64545] stroke-[1.75]" />
 
           <h3 id="delete-modal-title" class="text-lg font-serif font-semibold text-app mb-2">
             Hapus Kenangan Ini?

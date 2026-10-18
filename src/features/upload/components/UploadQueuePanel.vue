@@ -62,10 +62,10 @@ function promptRetry(task: UploadTask) {
     >
       <div
         v-if="uploadStore.isPanelOpen && uploadStore.hasTasks"
-        class="fixed bottom-24 right-4 left-4 sm:left-auto sm:w-105 max-h-[75vh] flex flex-col z-40 bg-surface border border-app rounded-3xl shadow-soft overflow-hidden"
+        class="fixed bottom-24 right-4 left-4 sm:left-auto sm:w-105 max-h-[75vh] flex flex-col z-40 bg-surface rounded-3xl shadow-2xl overflow-hidden"
       >
         <!-- Panel Header -->
-        <div class="px-5 py-4 border-b border-app flex items-center justify-between bg-surface-tint">
+        <div class="px-5 py-4 border-b border-transparent flex items-center justify-between bg-surface-tint">
           <div>
             <h3 class="text-sm font-semibold font-serif text-app">
               Antrean Upload
@@ -79,7 +79,7 @@ function promptRetry(task: UploadTask) {
             <button
               v-if="uploadStore.tasks.some((t) => t.status === 'completed')"
               type="button"
-              class="text-[11px] font-medium text-muted hover:text-app px-2 py-1 rounded-md transition-colors"
+              class="text-[11px] font-medium text-muted hover:text-app px-2 py-1 rounded-md transition-colors cursor-pointer"
               @click="uploadStore.clearFinished"
             >
               Bersihkan selesai
@@ -87,7 +87,7 @@ function promptRetry(task: UploadTask) {
 
             <button
               type="button"
-              class="text-muted hover:text-app p-1.5 rounded-full hover:bg-surface transition-colors min-h-9 min-w-9 flex items-center justify-center"
+              class="text-muted hover:text-app p-1.5 rounded-full hover:bg-surface transition-colors min-h-9 min-w-9 flex items-center justify-center cursor-pointer"
               aria-label="Tutup panel antrean"
               @click="uploadStore.isPanelOpen = false"
             >
@@ -97,7 +97,7 @@ function promptRetry(task: UploadTask) {
         </div>
 
         <!-- Task List -->
-        <div class="flex-1 overflow-y-auto p-4 space-y-3.5 divide-y divide-app/40">
+        <div class="flex-1 overflow-y-auto p-4 space-y-3.5">
           <div
             v-for="task in uploadStore.tasks"
             :key="task.id"
@@ -105,7 +105,7 @@ function promptRetry(task: UploadTask) {
           >
             <div class="flex items-start gap-3">
               <!-- Thumbnail Preview -->
-              <div class="w-12 h-12 rounded-[10px] overflow-hidden bg-surface-tint shrink-0 border border-app flex items-center justify-center">
+              <div class="w-12 h-12 rounded-[10px] overflow-hidden bg-surface-tint shrink-0 shadow-xs flex items-center justify-center">
                 <img
                   v-if="task.thumbPreviewUrl"
                   :src="task.thumbPreviewUrl"

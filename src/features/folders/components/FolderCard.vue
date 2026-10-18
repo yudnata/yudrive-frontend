@@ -42,7 +42,7 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
 
 <template>
   <div
-    class="relative group rounded-2xl bg-surface border border-app shadow-soft-sm hover:shadow-soft transition-all duration-200 cursor-pointer overflow-hidden flex flex-col"
+    class="relative group rounded-2xl bg-surface shadow-soft-sm hover:shadow-soft transition-all duration-200 cursor-pointer overflow-hidden flex flex-col"
     @click="$emit('select', folder)"
   >
     <!-- Cover Photo / Thumbnail Preview -->
@@ -54,13 +54,12 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         loading="lazy"
       />
+      <!-- Bare Folder Icon placeholder (No background container) -->
       <div
         v-else
         class="w-full h-full flex flex-col items-center justify-center gap-1.5 text-muted group-hover:text-app transition-colors"
       >
-        <div class="w-10 h-10 rounded-xl bg-white/60 dark:bg-black/20 flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE]">
-          <FolderIcon class="w-5 h-5 fill-current" />
-        </div>
+        <FolderIcon class="w-10 h-10 text-[#C93D68]/60 dark:text-[#FF8FAE]/60 fill-current" />
       </div>
 
       <!-- Quick Item Count Badge -->
@@ -73,22 +72,22 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
       <div class="absolute top-2 right-2">
         <button
           type="button"
-          class="w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white flex items-center justify-center transition-colors focus:outline-none"
+          class="w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white flex items-center justify-center transition-colors focus:outline-none cursor-pointer"
           aria-label="Menu opsi folder"
           @click="handleMenuClick"
         >
           <MoreVertical class="w-3.5 h-3.5" />
         </button>
 
-        <!-- Dropdown Menu -->
+        <!-- Dropdown Menu (Shadow-based, no borders) -->
         <div
           v-if="isMenuOpen"
-          class="absolute right-0 mt-1 w-44 py-1.5 rounded-xl bg-surface border border-app shadow-soft z-30 text-left text-xs"
+          class="absolute right-0 mt-1 w-44 py-1.5 rounded-xl bg-surface shadow-xl z-30 text-left text-xs"
           @click.stop
         >
           <button
             type="button"
-            class="w-full px-3 py-2 flex items-center gap-2 text-app hover:bg-surface-tint transition-colors"
+            class="w-full px-3 py-2 flex items-center gap-2 text-app hover:bg-surface-tint transition-colors cursor-pointer"
             @click="onAction('info', $event)"
           >
             <Info class="w-3.5 h-3.5 text-muted" />
@@ -96,16 +95,16 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
           </button>
           <button
             type="button"
-            class="w-full px-3 py-2 flex items-center gap-2 text-app hover:bg-surface-tint transition-colors"
+            class="w-full px-3 py-2 flex items-center gap-2 text-app hover:bg-surface-tint transition-colors cursor-pointer"
             @click="onAction('rename', $event)"
           >
             <Edit2 class="w-3.5 h-3.5 text-muted" />
             <span>Ubah Nama</span>
           </button>
-          <div class="my-1 border-t border-app" />
+          <div class="my-1 border-t border-transparent" />
           <button
             type="button"
-            class="w-full px-3 py-2 flex items-center gap-2 text-[#D64545] hover:bg-surface-tint transition-colors"
+            class="w-full px-3 py-2 flex items-center gap-2 text-[#D64545] hover:bg-surface-tint transition-colors cursor-pointer"
             @click="onAction('delete', $event)"
           >
             <Trash2 class="w-3.5 h-3.5" />
@@ -115,7 +114,7 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
       </div>
     </div>
 
-    <!-- Folder Info Footer -->
+    <!-- Folder Info Footer: Bare Icon -->
     <div class="p-3 flex items-center justify-between gap-2">
       <div class="overflow-hidden">
         <h3 class="text-sm font-semibold text-app truncate tracking-tight">
@@ -126,9 +125,7 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
         </p>
       </div>
 
-      <div class="w-7 h-7 rounded-lg bg-surface-tint shrink-0 flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE]">
-        <FolderIcon class="w-3.5 h-3.5 fill-current" />
-      </div>
+      <FolderIcon class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0 fill-current" />
     </div>
   </div>
 </template>

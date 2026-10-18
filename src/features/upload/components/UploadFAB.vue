@@ -142,11 +142,9 @@ onUnmounted(() => {
     <!-- Drag & Drop Screen Overlay -->
     <div
       v-if="isDraggingOverWindow"
-      class="fixed inset-0 z-50 bg-[#C93D68]/15 dark:bg-[#FF8FAE]/15 backdrop-blur-sm border-4 border-dashed border-[#C93D68] dark:border-[#FF8FAE] flex flex-col items-center justify-center p-6 text-center pointer-events-none select-none transition-all"
+      class="fixed inset-0 z-50 bg-[#C93D68]/15 dark:bg-[#FF8FAE]/15 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center pointer-events-none select-none transition-all"
     >
-      <div class="w-20 h-20 rounded-full bg-surface shadow-soft flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE] mb-4 scale-110 transition-transform">
-        <UploadCloud class="w-10 h-10" />
-      </div>
+      <UploadCloud class="w-16 h-16 text-[#C93D68] dark:text-[#FF8FAE] mb-3 stroke-[1.5]" />
       <h3 class="text-xl sm:text-2xl font-serif font-semibold text-app mb-2">
         Lepaskan foto atau video di sini
       </h3>
@@ -172,12 +170,12 @@ onUnmounted(() => {
         >
           <!-- Option: Buat Folder Baru -->
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-surface/95 border border-app shadow-soft text-xs font-semibold text-app select-none">
+            <span class="px-2.5 py-1 rounded-lg bg-surface/95 shadow-md text-xs font-semibold text-app select-none">
               Buat Folder Baru
             </span>
             <button
               type="button"
-              class="w-11 h-11 rounded-full bg-surface border border-app shadow-soft text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
+              class="w-11 h-11 rounded-full bg-surface shadow-md text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
               aria-label="Buat folder baru"
               @click="handleCreateFolderClick"
             >
@@ -187,12 +185,12 @@ onUnmounted(() => {
 
           <!-- Option: Upload Folder -->
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-surface/95 border border-app shadow-soft text-xs font-semibold text-app select-none">
+            <span class="px-2.5 py-1 rounded-lg bg-surface/95 shadow-md text-xs font-semibold text-app select-none">
               Upload Satu Folder
             </span>
             <button
               type="button"
-              class="w-11 h-11 rounded-full bg-surface border border-app shadow-soft text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
+              class="w-11 h-11 rounded-full bg-surface shadow-md text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
               aria-label="Upload satu folder dari komputer"
               @click="triggerFolderInput"
             >
@@ -202,12 +200,12 @@ onUnmounted(() => {
 
           <!-- Option: Upload File -->
           <div class="flex items-center gap-2">
-            <span class="px-2.5 py-1 rounded-lg bg-surface/95 border border-app shadow-soft text-xs font-semibold text-app select-none">
+            <span class="px-2.5 py-1 rounded-lg bg-surface/95 shadow-md text-xs font-semibold text-app select-none">
               Upload Foto / Video
             </span>
             <button
               type="button"
-              class="w-11 h-11 rounded-full bg-surface border border-app shadow-soft text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
+              class="w-11 h-11 rounded-full bg-surface shadow-md text-[#C93D68] dark:text-[#FF8FAE] hover:bg-surface-tint flex items-center justify-center transition-all cursor-pointer"
               aria-label="Upload foto atau video"
               @click="triggerFileInput"
             >
@@ -222,7 +220,7 @@ onUnmounted(() => {
         <button
           v-if="uploadStore.hasTasks"
           type="button"
-          class="glass-nav bg-surface/90 text-app px-4 py-2 rounded-full border border-app shadow-soft text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-11 transition-all"
+          class="glass-nav bg-surface/90 text-app px-4 py-2 rounded-full shadow-md text-xs font-semibold flex items-center gap-2 hover:bg-surface-tint min-h-11 transition-all cursor-pointer"
           @click="uploadStore.isPanelOpen = !uploadStore.isPanelOpen"
         >
           <span
@@ -248,7 +246,7 @@ onUnmounted(() => {
           <!-- Notification badge if uploading -->
           <span
             v-if="uploadStore.activeCount > 0"
-            class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#C93D68] text-white text-[10px] font-bold flex items-center justify-center border-2 border-white dark:border-[#1E1419]"
+            class="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#C93D68] text-white text-[10px] font-bold flex items-center justify-center shadow-xs"
           >
             {{ uploadStore.activeCount }}
           </span>

@@ -50,12 +50,12 @@ defineEmits<{
         :disabled="disabled"
         :autocomplete="autocomplete"
         :class="[
-          'w-full py-3 rounded-xl border bg-surface text-sm text-app transition-all',
-          'focus:outline-none focus:ring-2 focus:ring-[#FFD9E3] dark:focus:ring-[#4A2635]',
+          'w-full py-3 rounded-xl bg-surface text-sm text-app transition-all shadow-sm',
+          'focus:outline-none focus:ring-2 focus:ring-[#C93D68]/40 dark:focus:ring-[#FF8FAE]/40',
           'disabled:opacity-60 disabled:cursor-not-allowed',
           $slots.leading ? 'pl-10' : 'pl-4',
           $slots.trailing ? 'pr-10' : 'pr-4',
-          error ? 'border-[#D64545] focus:border-[#D64545]' : 'border-app focus:border-[#C93D68]',
+          error ? 'ring-2 ring-[#D64545]' : '',
         ]"
         @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
       />

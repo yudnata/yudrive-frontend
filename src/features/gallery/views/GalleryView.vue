@@ -7,6 +7,7 @@ import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useViewerStore } from '@/features/viewer/stores/viewer.store';
 import { useToast } from '@/composables/useToast';
 import GalleryHeader from '../components/GalleryHeader.vue';
+import GalleryHero from '../components/GalleryHero.vue';
 import GalleryDateGroup from '../components/GalleryDateGroup.vue';
 import GalleryEmptyState from '../components/GalleryEmptyState.vue';
 import FolderCard from '@/features/folders/components/FolderCard.vue';
@@ -15,10 +16,11 @@ import FolderInfoModal from '@/features/folders/components/FolderInfoModal.vue';
 import UploadFAB from '@/features/upload/components/UploadFAB.vue';
 import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
 import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
+import FloatingHearts from '@/components/ui/FloatingHearts.vue';
 import Skeleton from '@/components/ui/Skeleton.vue';
 import Button from '@/components/ui/Button.vue';
 import { MediaItem, Folder as FolderType } from '@/types';
-import { Heart, Coffee, Folder as FolderIcon, FolderPlus, ArrowLeft, ChevronRight, Home } from 'lucide-vue-next';
+import { Coffee, Folder as FolderIcon, FolderPlus, ArrowLeft, ChevronRight, Home } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
@@ -136,16 +138,19 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-app text-app pb-safe">
+  <div class="relative min-h-screen flex flex-col bg-app text-app pb-safe overflow-x-hidden">
+    <!-- GPU-Accelerated Lag-Free Background Love Particles -->
+    <FloatingHearts />
+
     <!-- Header -->
     <GalleryHeader />
 
-    <!-- Cold Start Wakeup Notice -->
+    <!-- Cold Start Wakeup Notice (Shadow-based, no border) -->
     <div
       v-if="authStore.isColdStarting"
-      class="max-w-6xl mx-auto px-4 mt-4 w-full"
+      class="relative z-10 max-w-6xl mx-auto px-4 mt-4 w-full"
     >
-      <div class="p-3.5 rounded-[14px] bg-surface-tint border border-app text-xs text-app flex items-center gap-2.5">
+      <div class="p-3.5 rounded-[14px] bg-surface-tint shadow-sm text-xs text-app flex items-center gap-2.5">
         <Coffee class="w-4 h-4 text-[#C93D68] shrink-0" />
         <p class="leading-relaxed">
           Server Azure sedang bangun dari mode tidur. Data akan segera muncul dalam beberapa detik...
@@ -154,10 +159,17 @@ onMounted(async () => {
     </div>
 
     <!-- Main Explorer / Gallery Container -->
-    <main class="flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6">
-      <!-- Breadcrumb Navigation Bar (Windows Explorer Style) -->
+    <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6">
+      <!-- HERO SECTION AT TOP -->
+      <GalleryHero
+        v-if="!folderStore.currentFolder"
+        @create-folder="handleOpenCreateFolder"
+        @upload="handleEmptyUpload"
+      />
+
+      <!-- Breadcrumb Navigation Bar (Windows Explorer Style, Shadow-based) -->
       <nav
-        class="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-2xl bg-surface border border-app shadow-soft-sm"
+        class="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-2xl bg-surface shadow-soft-sm"
         aria-label="Navigasi folder"
       >
         <div class="flex items-center gap-1.5 overflow-x-auto text-xs py-0.5">
@@ -202,7 +214,7 @@ onMounted(async () => {
           type="button"
           variant="secondary"
           size="sm"
-          class="shrink-0 text-xs flex items-center gap-1.5 py-1.5"
+          class="shrink-0 text-xs flex items-center gap-1.5 py-1.5 cursor-pointer"
           @click="handleOpenCreateFolder"
         >
           <FolderPlus class="w-3.5 h-3.5 text-[#C93D68] dark:text-[#FF8FAE]" />
@@ -210,7 +222,7 @@ onMounted(async () => {
         </Button>
       </nav>
 
-      <!-- FOLDERS SECTION (Active folders or subfolders) -->
+      <!-- FOLDERS SECTION (Placed directly below Hero / Explorer nav) -->
       <section v-if="folderStore.folders.length > 0" class="space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold uppercase tracking-wider text-muted flex items-center gap-1.5">
@@ -241,7 +253,7 @@ onMounted(async () => {
           </h2>
         </div>
 
-        <!-- Loading Skeleton -->
+        <!-- Loading Skeleton (Neutral Shimmer, No Border) -->
         <div v-if="galleryStore.isLoading" class="space-y-6">
           <Skeleton width="180px" height="24px" rounded="sm" />
           <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 sm:gap-3">
@@ -263,11 +275,10 @@ onMounted(async () => {
         <!-- Empty Folder State (Has no media in current folder) -->
         <div
           v-else-if="galleryStore.items.length === 0 && folderStore.currentFolder"
-          class="text-center py-12 px-4 rounded-3xl bg-surface border border-app shadow-soft-sm space-y-3"
+          class="text-center py-12 px-4 rounded-3xl bg-surface shadow-soft-sm space-y-3"
         >
-          <div class="w-12 h-12 rounded-2xl bg-surface-tint flex items-center justify-center mx-auto text-[#C93D68] dark:text-[#FF8FAE]">
-            <FolderIcon class="w-6 h-6 fill-current" />
-          </div>
+          <!-- Bare Icon (No background container) -->
+          <FolderIcon class="w-12 h-12 mx-auto text-[#C93D68]/80 dark:text-[#FF8FAE]/80 stroke-[1.5]" />
           <h3 class="text-base font-serif font-semibold text-app">
             Folder "{{ folderStore.currentFolder.name }}" masih kosong
           </h3>
@@ -325,13 +336,5 @@ onMounted(async () => {
       @cover-changed="handleCoverChanged"
       @close="isFolderInfoOpen = false"
     />
-
-    <!-- Footer -->
-    <footer class="py-6 text-center text-xs text-muted border-t border-app mt-auto">
-      <p class="flex items-center justify-center gap-1.5">
-        Ruang privat kita berdua
-        <Heart class="w-3.5 h-3.5 text-[#E0527A] fill-current inline" />
-      </p>
-    </footer>
   </div>
 </template>

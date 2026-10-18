@@ -6,6 +6,7 @@ import { useToast } from '@/composables/useToast';
 import Card from '@/components/ui/Card.vue';
 import Input from '@/components/ui/Input.vue';
 import Button from '@/components/ui/Button.vue';
+import FloatingHearts from '@/components/ui/FloatingHearts.vue';
 import { Heart, Mail, Lock, Coffee, Eye, EyeOff } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
@@ -51,14 +52,15 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center p-4 bg-white dark:bg-[#1E1419]">
-    <div class="w-full max-w-md">
-      <Card rounded="lg" class="p-8 sm:p-10 bg-white dark:bg-[#2A1D24] shadow-soft border border-app">
-        <!-- Logo & Header -->
+  <div class="relative min-h-screen flex items-center justify-center p-4 bg-white dark:bg-[#1E1419] overflow-hidden">
+    <!-- GPU-Accelerated Lag-Free Background Love Particles -->
+    <FloatingHearts />
+
+    <div class="relative z-10 w-full max-w-md">
+      <Card rounded="lg" class="p-8 sm:p-10 bg-white dark:bg-[#2A1D24] shadow-2xl">
+        <!-- Logo & Header: Bare Heart Icon without background circle -->
         <div class="text-center mb-8">
-          <div class="w-12 h-12 mx-auto mb-4 rounded-full bg-[#FFD9E3] dark:bg-[#4A2635] flex items-center justify-center text-[#C93D68] dark:text-[#FF8FAE]">
-            <Heart class="w-6 h-6 fill-current" />
-          </div>
+          <Heart class="w-10 h-10 mx-auto mb-3 text-[#C93D68] dark:text-[#FF8FAE] fill-current drop-shadow-sm" />
 
           <h1 class="text-2xl sm:text-3xl font-serif font-semibold text-[#C93D68] dark:text-[#FF8FAE] mb-2 tracking-tight">
             Our Memories
@@ -69,10 +71,10 @@ async function onSubmit() {
           </p>
         </div>
 
-        <!-- Azure F1 Cold Start Friendly Notice -->
+        <!-- Azure F1 Cold Start Friendly Notice (Shadow-based, no borders) -->
         <div
           v-if="authStore.isColdStarting"
-          class="mb-6 p-3.5 rounded-[14px] bg-surface-tint border border-app text-xs text-app flex items-start gap-2.5 transition-all"
+          class="mb-6 p-3.5 rounded-[14px] bg-surface-tint shadow-sm text-xs text-app flex items-start gap-2.5 transition-all"
         >
           <Coffee class="w-4 h-4 text-[#C93D68] shrink-0 mt-0.5" />
           <p class="leading-relaxed">
@@ -83,7 +85,7 @@ async function onSubmit() {
         <!-- Error Alert -->
         <div
           v-if="error"
-          class="mb-6 p-3.5 rounded-[14px] bg-[#FFD9E3]/50 dark:bg-[#4A2635] text-xs text-[#D64545] dark:text-[#FF8FAE] border border-[#F6D5DF] dark:border-[#4A3340] leading-relaxed"
+          class="mb-6 p-3.5 rounded-[14px] bg-[#FFD9E3]/50 dark:bg-[#4A2635] text-xs text-[#D64545] dark:text-[#FF8FAE] shadow-sm leading-relaxed"
           role="alert"
         >
           {{ error }}
@@ -136,7 +138,7 @@ async function onSubmit() {
               <input
                 type="checkbox"
                 v-model="rememberMe"
-                class="w-4 h-4 rounded border-app text-[#C93D68] accent-[#C93D68] focus:ring-[#FFD9E3] focus:ring-offset-0 bg-surface cursor-pointer transition-colors"
+                class="w-4 h-4 rounded text-[#C93D68] accent-[#C93D68] focus:ring-[#FFD9E3] focus:ring-offset-0 bg-surface cursor-pointer transition-colors shadow-xs"
               />
               <span>Ingat saya di perangkat ini</span>
             </label>

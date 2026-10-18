@@ -4,7 +4,7 @@
   --bg: #FFFFFF;
   --surface: #FFFFFF;
   --surface-tint: #FFEEF3;
-  --border: #F6D5DF;
+  --border: transparent;
   --primary: #C93D68;
   --primary-hover: #B53160;
   --primary-soft: #FFD9E3;
@@ -17,11 +17,11 @@
   --radius-sm: 10px;
   --radius: 16px;
   --radius-lg: 24px;
-  --shadow: 0 8px 30px rgba(201, 61, 104, 0.10);
-  --shadow-sm: 0 2px 10px rgba(201, 61, 104, 0.08);
+  --shadow: 0 10px 30px rgba(201, 61, 104, 0.08);
+  --shadow-sm: 0 2px 10px rgba(201, 61, 104, 0.05);
 
   --font-serif: 'Fraunces', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-sans: 'Quicksand', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -29,13 +29,13 @@
     --bg: #1E1419;
     --surface: #2A1D24;
     --surface-tint: #35242D;
-    --border: #4A3340;
+    --border: transparent;
     --primary: #FF8FAE;
     --primary-hover: #FFA6BF;
     --primary-soft: #4A2635;
     --text: #F7E9EE;
     --text-muted: #BFA3AE;
-    --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
     --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
   }
 }
@@ -44,13 +44,13 @@
   --bg: #1E1419;
   --surface: #2A1D24;
   --surface-tint: #35242D;
-  --border: #4A3340;
+  --border: transparent;
   --primary: #FF8FAE;
   --primary-hover: #FFA6BF;
   --primary-soft: #4A2635;
   --text: #F7E9EE;
   --text-muted: #BFA3AE;
-  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
@@ -89,7 +89,7 @@
 }
 
 .border-app {
-  border-color: var(--border);
+  border-color: transparent;
 }
 
 .shadow-soft {
@@ -112,7 +112,7 @@
 @media (hover: hover) and (pointer: fine) {
   .photo-card:hover {
     transform: translateY(-2px);
-    box-shadow: var(--shadow-sm);
+    box-shadow: var(--shadow);
   }
 }
 
@@ -133,7 +133,7 @@
   transform: translateY(0);
 }
 
-/* Pink-tinted skeleton shimmer */
+/* Neutral modern skeleton shimmer */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -144,9 +144,14 @@
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(90deg, var(--surface-tint) 25%, var(--primary-soft) 50%, var(--surface-tint) 75%);
+  background: linear-gradient(90deg, #F4F4F5 25%, #E4E4E7 50%, #F4F4F5 75%);
   background-size: 200% 100%;
   animation: shimmer 1.8s infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(90deg, #27272A 25%, #3F3F46 50%, #27272A 75%);
+  background-size: 200% 100%;
 }
 
 /* Mobile safe area padding */

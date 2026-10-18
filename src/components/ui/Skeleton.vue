@@ -17,7 +17,7 @@ withDefaults(defineProps<Props>(), {
 <template>
   <div
     :class="[
-      'skeleton-shimmer border border-app/50',
+      'skeleton-shimmer',
       aspect === 'square' ? 'aspect-square' : aspect === 'video' ? 'aspect-video' : '',
       rounded === 'sm'
         ? 'rounded-[10px]'
