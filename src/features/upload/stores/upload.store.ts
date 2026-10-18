@@ -6,6 +6,7 @@ import {
   getAllPersistedUploads,
   deletePersistedUpload,
   clearCompletedPersistedUploads,
+  savePersistedUpload,
 } from '../utils/indexed-db';
 import { useGalleryStore } from '@/features/gallery/stores/gallery.store';
 import { useFolderStore } from '@/features/folders/stores/folders.store';
@@ -49,23 +50,65 @@ export const useUploadStore = defineStore('upload', () => {
     }, delayMs);
   }
 
-  // Load any unfinished uploads from IndexedDB on startup
+  // Load any unfinished uploads from IndexedDB on startup & automatically resume
   async function loadPersistedState() {
     try {
       const persisted = await getAllPersistedUploads();
+      let hasRecoveredQueued = false;
+
       for (const item of persisted) {
         if (item.status !== 'completed' && !tasks.value.some((t) => t.id === item.id)) {
-          tasks.value.push({
-            id: item.id,
-            mediaId: item.mediaId,
-            filename: item.filename,
-            sizeBytes: item.fileSize,
-            progress: item.progressPercent,
-            status: 'failed',
-            statusText: 'Upload terputus (silakan pilih file kembali untuk melanjutkan)',
-            thumbPreviewUrl: '',
-          });
+          let thumbPreviewUrl = '';
+          if (item.file) {
+            try {
+              thumbPreviewUrl = URL.createObjectURL(item.file);
+            } catch {}
+          }
+
+          if (item.file) {
+            // File is preserved in IndexedDB: automatically resume async upload!
+            const fileObj =
+              item.file instanceof File
+                ? item.file
+                : new File([item.file], item.filename, { type: item.mime });
+
+            tasks.value.push({
+              id: item.id,
+              file: fileObj,
+              mediaId: item.mediaId || undefined,
+              folderId: item.folderId,
+              filename: item.filename,
+              sizeBytes: item.fileSize,
+              progress: item.progressPercent,
+              status: 'queued',
+              statusText:
+                item.progressPercent > 0
+                  ? `Melanjutkan upload (${item.progressPercent}%)...`
+                  : 'Menunggu antrean...',
+              thumbPreviewUrl,
+            });
+            hasRecoveredQueued = true;
+            isPanelOpen.value = true;
+          } else {
+            // Task metadata only (e.g. without file pointer)
+            tasks.value.push({
+              id: item.id,
+              mediaId: item.mediaId,
+              folderId: item.folderId,
+              filename: item.filename,
+              sizeBytes: item.fileSize,
+              progress: item.progressPercent,
+              status: 'failed',
+              statusText: 'Upload terputus (silakan pilih file kembali untuk melanjutkan)',
+              thumbPreviewUrl: '',
+            });
+            isPanelOpen.value = true;
+          }
         }
+      }
+
+      if (hasRecoveredQueued) {
+        processQueue();
       }
     } catch (err) {
       console.warn('Failed to load persisted upload state:', err);
@@ -107,6 +150,26 @@ export const useUploadStore = defineStore('upload', () => {
       };
 
       tasks.value.unshift(task);
+
+      // Persist File into IndexedDB immediately so page refresh never loses progress!
+      savePersistedUpload({
+        id,
+        mediaId: '',
+        filename: file.name,
+        fileSize: file.size,
+        mime: file.type || 'application/octet-stream',
+        mode: 'single',
+        thumbUploadUrl: '',
+        completedParts: [],
+        thumbUploaded: false,
+        status: 'queued',
+        progressPercent: 0,
+        updatedAt: Date.now(),
+        file,
+        folderId: folderId !== undefined ? folderId : undefined,
+      }).catch((err) => {
+        console.warn('Gagal menyimpan file ke IndexedDB:', err);
+      });
     }
 
     processQueue();

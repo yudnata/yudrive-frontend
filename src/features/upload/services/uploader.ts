@@ -3,6 +3,7 @@ import { MediaItem } from '@/types';
 import {
   savePersistedUpload,
   deletePersistedUpload,
+  getPersistedUpload,
   PersistedUpload,
 } from '../utils/indexed-db';
 import { ProcessedMedia } from '../utils/media-processor';
@@ -113,60 +114,96 @@ export class DirectR2Uploader {
 
     onProgress(5, 'Menginisialisasi upload di server...');
 
-    // 1. Call POST /uploads/init
-    const initRes = await apiFetch<{
+    // Check if task already has active multipart upload state in IndexedDB (resumed after refresh)
+    const existing = await getPersistedUpload(taskId);
+    let initRes: {
       mediaId: string;
       mode: 'single' | 'multipart';
-      objectKey: string;
-      thumbKey: string;
+      objectKey?: string;
+      thumbKey?: string;
       uploadUrl?: string;
       thumbUploadUrl: string;
       uploadId?: string;
       partSize?: number;
       parts?: Array<{ partNumber: number; uploadUrl: string }>;
-    }>('/uploads/init', {
-      method: 'POST',
-      body: JSON.stringify({
-        filename: media.file.name,
-        mime: media.mime,
-        size: media.size,
-        width: media.width,
-        height: media.height,
-        duration: media.duration,
-        takenAt: media.takenAt,
-        folderId: folderId || undefined,
-      }),
-    });
-
-    const persisted: PersistedUpload = {
-      id: taskId,
-      mediaId: initRes.mediaId,
-      filename: media.file.name,
-      fileSize: media.size,
-      mime: media.mime,
-      mode: initRes.mode,
-      uploadUrl: initRes.uploadUrl,
-      thumbUploadUrl: initRes.thumbUploadUrl,
-      uploadId: initRes.uploadId,
-      partSize: initRes.partSize,
-      parts: initRes.parts,
-      completedParts: [],
-      thumbUploaded: false,
-      status: 'uploading',
-      progressPercent: 10,
-      updatedAt: Date.now(),
     };
 
-    await savePersistedUpload(persisted);
+    let persisted: PersistedUpload;
+
+    if (
+      existing &&
+      existing.mediaId &&
+      existing.mode === 'multipart' &&
+      existing.uploadId &&
+      existing.parts &&
+      existing.parts.length > 0
+    ) {
+      // Resume existing multipart upload!
+      initRes = {
+        mediaId: existing.mediaId,
+        mode: existing.mode,
+        uploadId: existing.uploadId,
+        partSize: existing.partSize,
+        parts: existing.parts,
+        thumbUploadUrl: existing.thumbUploadUrl,
+      };
+      persisted = {
+        ...existing,
+        file: media.file,
+        status: 'uploading',
+        updatedAt: Date.now(),
+      };
+      await savePersistedUpload(persisted);
+    } else {
+      // 1. Call POST /uploads/init
+      initRes = await apiFetch<any>('/uploads/init', {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: media.file.name,
+          mime: media.mime,
+          size: media.size,
+          width: media.width,
+          height: media.height,
+          duration: media.duration,
+          takenAt: media.takenAt,
+          folderId: folderId || undefined,
+        }),
+      });
+
+      persisted = {
+        id: taskId,
+        file: media.file,
+        folderId: folderId !== undefined ? folderId : undefined,
+        mediaId: initRes.mediaId,
+        filename: media.file.name,
+        fileSize: media.size,
+        mime: media.mime,
+        mode: initRes.mode,
+        uploadUrl: initRes.uploadUrl,
+        thumbUploadUrl: initRes.thumbUploadUrl,
+        uploadId: initRes.uploadId,
+        partSize: initRes.partSize,
+        parts: initRes.parts,
+        completedParts: existing?.completedParts || [],
+        thumbUploaded: existing?.thumbUploaded || false,
+        status: 'uploading',
+        progressPercent: existing?.progressPercent || 10,
+        updatedAt: Date.now(),
+      };
+      await savePersistedUpload(persisted);
+    }
 
     try {
-      // 2. Upload thumbnail in parallel with file
-      const thumbPromise = uploadThumbnail(initRes.thumbUploadUrl, media.thumbBlob).then(
-        async () => {
-          persisted.thumbUploaded = true;
-          await savePersistedUpload(persisted);
-        }
-      );
+      // 2. Upload thumbnail in parallel with file (if not already uploaded)
+      let thumbPromise: Promise<void> = Promise.resolve();
+      if (!persisted.thumbUploaded && initRes.thumbUploadUrl) {
+        thumbPromise = uploadThumbnail(initRes.thumbUploadUrl, media.thumbBlob).then(
+          async () => {
+            persisted.thumbUploaded = true;
+            await savePersistedUpload(persisted);
+          }
+        );
+      }
 
       // 3. Upload media body
       if (initRes.mode === 'single' && initRes.uploadUrl) {

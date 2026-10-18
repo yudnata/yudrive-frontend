@@ -15,6 +15,8 @@ export interface PersistedUpload {
   status: 'queued' | 'uploading' | 'completed' | 'failed' | 'paused';
   progressPercent: number;
   updatedAt: number;
+  file?: File | Blob;
+  folderId?: string | null;
 }
 
 const DB_NAME = 'our_memories_storage';
