@@ -7,6 +7,8 @@ import {
   Edit2,
   Trash2,
   X,
+  CalendarHeart,
+  Heart,
 } from 'lucide-vue-next';
 import { formatEventDate } from '@/utils/date';
 
@@ -86,11 +88,11 @@ function onAction(action: 'info' | 'rename' | 'delete') {
 
 <template>
   <div
-    class="relative group rounded-2xl bg-surface shadow-soft-sm transition-all duration-300 cursor-pointer flex flex-col select-none"
+    class="relative group transition-all duration-300 cursor-pointer flex flex-col select-none"
     :class="[
       isMenuOpen || isPressing
-        ? 'scale-[1.04] ring-2.5 ring-[#C93D68] dark:ring-[#FF8FAE] shadow-xl z-20'
-        : 'hover:scale-[1.02] hover:shadow-soft'
+        ? 'scale-[1.04] z-20'
+        : 'hover:scale-[1.02]'
     ]"
     @touchstart.passive="startPress"
     @touchend="cancelPress"
@@ -102,52 +104,85 @@ function onAction(action: 'info' | 'rename' | 'delete') {
     @contextmenu.prevent
     @click="handleClick"
   >
-    <!-- Cover Photo / Thumbnail Preview Container (Clean, no 3-dots, no 0 item badge) -->
-    <div class="relative w-full aspect-16/10 bg-surface-tint rounded-t-2xl flex items-center justify-center overflow-hidden">
-      <!-- Clipped Image / Placeholder Wrapper -->
-      <div class="absolute inset-0 pointer-events-none">
-        <img
-          v-if="folder.coverUrl"
-          :src="folder.coverUrl"
-          :alt="folder.name"
-          class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          loading="lazy"
-        />
-        <!-- Bare Folder Icon placeholder -->
+    <!-- AUTHENTIC FOLDER CARD DESIGN -->
+    <div
+      class="relative w-full flex flex-col transition-all duration-300"
+      :class="isMenuOpen || isPressing ? 'drop-shadow-xl' : 'drop-shadow-sm group-hover:drop-shadow-md'"
+    >
+      <!-- 1. FOLDER TAB (Top-left tab shaped like a real physical file folder) -->
+      <div class="flex items-end pl-2 -mb-px relative z-10">
+        <!-- Tab Base with Index Number -->
         <div
-          v-else
-          class="w-full h-full flex flex-col items-center justify-center gap-1.5 text-muted group-hover:text-app transition-colors"
+          class="h-6 sm:h-7 px-3.5 rounded-t-xl bg-[#FFD6E3] dark:bg-[#3D202F] flex items-center gap-1 text-[11px] font-bold text-[#C93D68] dark:text-[#FF8FAE] border-t border-l border-[#FFCCD9] dark:border-white/10 shadow-xs"
         >
-          <FolderIcon class="w-10 h-10 text-[#C93D68]/60 dark:text-[#FF8FAE]/60 fill-current" />
+          <span class="text-[9px] opacity-75">#</span>
+          <span>{{ indexNumber !== undefined ? indexNumber : '1' }}</span>
         </div>
+
+        <!-- Smooth Tab Shoulder Curve connecting Tab to Folder Body -->
+        <svg class="h-4 w-4 text-[#FFD6E3] dark:text-[#3D202F] -ml-px fill-current shrink-0" viewBox="0 0 16 16">
+          <path d="M0,0 Q6,0 10,8 Q13,16 16,16 L0,16 Z" />
+        </svg>
       </div>
 
-      <!-- Sequential Folder Number Badge (#1, #2, #3... always consecutive, no gaps) -->
+      <!-- 2. FOLDER BODY (Tabbed silhouette with cover photo or cute folder pocket interior) -->
       <div
-        v-if="indexNumber !== undefined"
-        class="absolute top-2 left-2 z-10 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold tracking-tight flex items-center gap-0.5 pointer-events-none shadow-xs border border-white/10"
+        class="relative w-full aspect-16/10 rounded-2xl rounded-tl-none overflow-hidden bg-gradient-to-b from-[#FFD6E3] via-[#FFEBF1] to-[#FFE0EA] dark:from-[#3D202F] dark:via-[#2F1724] dark:to-[#25121C] border border-[#FFCCD9]/80 dark:border-white/10 shadow-xs"
       >
-        <span class="text-[#FF8FAE] font-normal">#</span>
-        <span>{{ indexNumber }}</span>
-      </div>
-    </div>
+        <!-- A. When Folder has Cover Photo -->
+        <template v-if="folder.coverUrl">
+          <img
+            :src="folder.coverUrl"
+            :alt="folder.name"
+            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            loading="lazy"
+          />
+          <!-- Soft gradient vignette -->
+          <div class="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+        </template>
 
-    <!-- Folder Info Footer -->
-    <div class="p-3 flex items-center justify-between gap-2">
-      <div class="overflow-hidden">
-        <h3 class="text-sm font-semibold text-app truncate tracking-tight">
+        <!-- B. When Folder is Empty / No Cover: Cute Skeuomorphic Stationery Folder Interior -->
+        <template v-else>
+          <!-- Peeking document / photo paper sheet inside the folder -->
+          <div class="absolute top-2 inset-x-3.5 h-14 rounded-t-xl bg-white/90 dark:bg-white/10 shadow-xs border border-white/60 dark:border-white/5 flex flex-col justify-center px-3 gap-1.5 transition-transform duration-300 group-hover:-translate-y-1">
+            <div class="w-16 h-1.5 rounded-full bg-[#FFCCD9]/70 dark:bg-white/20" />
+            <div class="w-10 h-1.5 rounded-full bg-[#FFCCD9]/50 dark:bg-white/10" />
+            <Heart class="w-3 h-3 text-[#FF8FAE]/50 fill-current absolute right-3 top-3" />
+          </div>
+
+          <!-- Front Pocket Flap (Curved front flap holding the paper) -->
+          <div class="absolute bottom-0 inset-x-0 h-14 bg-gradient-to-t from-[#FFC2D3] to-[#FFD6E3] dark:from-[#361A28] dark:to-[#452234] border-t border-white/50 dark:border-white/10 shadow-sm flex items-center justify-center">
+            <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/30 dark:bg-black/20 backdrop-blur-xs text-[#C93D68] dark:text-[#FF8FAE] shadow-2xs">
+              <FolderIcon class="w-4 h-4 fill-current opacity-90" />
+              <span class="text-[10px] font-bold tracking-tight">Kenangan</span>
+            </div>
+          </div>
+        </template>
+      </div>
+
+      <!-- 3. BOTTOM WHITESPACE SECTION (Clean whitespace area for folder title & metadata) -->
+      <div
+        class="mt-2 p-3 sm:p-3.5 rounded-2xl bg-surface border border-black/5 dark:border-white/10 shadow-soft-sm transition-colors"
+      >
+        <h3 class="text-sm font-bold text-app truncate tracking-tight">
           {{ folder.name }}
         </h3>
-        <p class="text-[11px] text-muted truncate mt-0.5 flex items-center gap-1.5">
-          <span>{{ formatBytes(folder.totalBytes) }}</span>
-          <template v-if="folder.eventDate">
-            <span class="text-muted/40">•</span>
-            <span class="text-[#C93D68] dark:text-[#FF8FAE] font-medium">{{ formatEventDate(folder.eventDate) }}</span>
-          </template>
-        </p>
-      </div>
 
-      <FolderIcon class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0 fill-current" />
+        <div class="flex items-center gap-1.5 text-[11px] text-muted mt-0.5 truncate">
+          <span>{{ folder.itemCount }} item</span>
+          <span class="text-muted/40">•</span>
+          <span>{{ formatBytes(folder.totalBytes) }}</span>
+        </div>
+
+        <!-- Optional Event Date Badge -->
+        <div
+          v-if="folder.eventDate"
+          class="mt-2 pt-2 border-t border-black/5 dark:border-white/10 flex items-center gap-1 text-[10px] font-medium text-[#C93D68] dark:text-[#FF8FAE]"
+        >
+          <CalendarHeart class="w-3 h-3 shrink-0" />
+          <span class="truncate">{{ formatEventDate(folder.eventDate) }}</span>
+        </div>
+      </div>
     </div>
 
     <!-- Long-Press Action Modal / Sheet -->
