@@ -36,11 +36,38 @@ const { direction } = useSwipe(stageRef, {
   },
 });
 
+let isHandlingPopState = false;
+
+function handleClose() {
+  if (!isHandlingPopState && window.history.state?.modal === 'lightbox') {
+    window.history.back();
+  } else {
+    viewerStore.close();
+  }
+}
+
+function onPopState() {
+  if (viewerStore.isOpen) {
+    isHandlingPopState = true;
+    viewerStore.close();
+    isHandlingPopState = false;
+  }
+}
+
+watch(
+  () => viewerStore.isOpen,
+  (open) => {
+    if (open) {
+      window.history.pushState({ ...window.history.state, modal: 'lightbox' }, '');
+    }
+  }
+);
+
 function handleKeydown(e: KeyboardEvent) {
   if (!viewerStore.isOpen) return;
 
   if (e.key === 'Escape' && !showDeleteConfirm.value) {
-    viewerStore.close();
+    handleClose();
   } else if (e.key === 'ArrowRight' && viewerStore.hasNext && !showDeleteConfirm.value) {
     viewerStore.next();
   } else if (e.key === 'ArrowLeft' && viewerStore.hasPrev && !showDeleteConfirm.value) {
@@ -98,10 +125,12 @@ watch(
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown);
+  window.addEventListener('popstate', onPopState);
 });
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeydown);
+  window.removeEventListener('popstate', onPopState);
 });
 </script>
 
@@ -126,7 +155,7 @@ onUnmounted(() => {
               type="button"
               class="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors min-h-11 min-w-11 flex items-center justify-center text-white/90"
               aria-label="Tutup penampil kenangan"
-              @click="viewerStore.close"
+              @click="handleClose"
             >
               <X class="w-5 h-5" />
             </button>

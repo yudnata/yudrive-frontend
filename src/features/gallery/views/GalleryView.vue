@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useIntersectionObserver } from '@vueuse/core';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useGalleryStore } from '../stores/gallery.store';
@@ -21,6 +22,8 @@ import Button from '@/components/ui/Button.vue';
 import { MediaItem, Folder as FolderType } from '@/types';
 import { Coffee, Folder as FolderIcon, FolderPlus, ArrowLeft, ChevronRight, Home } from 'lucide-vue-next';
 
+const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 const galleryStore = useGalleryStore();
 const folderStore = useFolderStore();
@@ -104,9 +107,14 @@ async function handleDeleteFolder(folder: FolderType) {
     return;
   }
   try {
+    const isCurrent = folderStore.currentFolder?.id === folder.id;
     await folderStore.deleteFolder(folder.id);
     toast.success('Folder berhasil dihapus.');
-    await galleryStore.fetchMedia(true, folderStore.currentFolder?.id);
+    if (isCurrent) {
+      handleNavigateRoot();
+    } else {
+      await galleryStore.fetchMedia(true, folderStore.currentFolder?.id);
+    }
   } catch (err: any) {
     toast.error(`Gagal menghapus folder: ${err.message}`);
   }
@@ -115,24 +123,108 @@ async function handleDeleteFolder(folder: FolderType) {
 function handleSelectFolder(folder: FolderType) {
   folderStore.openFolder(folder);
   galleryStore.fetchMedia(true, folder.id);
+  router.push({
+    path: '/',
+    query: { ...route.query, folder: folder.id },
+  });
 }
 
 function handleNavigateBreadcrumb(index: number) {
-  folderStore.navigateToBreadcrumb(index);
-  galleryStore.fetchMedia(true, folderStore.currentFolder?.id);
+  if (index < 0) {
+    handleNavigateRoot();
+    return;
+  }
+  const target = folderStore.breadcrumbs[index];
+  if (target) {
+    folderStore.navigateToBreadcrumb(index);
+    galleryStore.fetchMedia(true, target.id);
+    router.push({
+      path: '/',
+      query: { ...route.query, folder: target.id },
+    });
+  } else {
+    handleNavigateRoot();
+  }
 }
 
 function handleNavigateRoot() {
   folderStore.navigateToRoot();
   galleryStore.fetchMedia(true, null);
+  const nextQuery = { ...route.query };
+  delete nextQuery.folder;
+  router.push({
+    path: '/',
+    query: nextQuery,
+  });
 }
+
+async function syncFolderFromRoute(folderId?: string) {
+  if (!folderId) {
+    if (folderStore.currentFolder !== null) {
+      folderStore.navigateToRoot();
+      await galleryStore.fetchMedia(true, null);
+    }
+    return;
+  }
+
+  // Already on this folder
+  if (folderStore.currentFolder?.id === folderId) {
+    return;
+  }
+
+  // Target folder is in breadcrumbs
+  const breadcrumbIndex = folderStore.breadcrumbs.findIndex((b) => b.id === folderId);
+  if (breadcrumbIndex !== -1) {
+    folderStore.navigateToBreadcrumb(breadcrumbIndex);
+    await galleryStore.fetchMedia(true, folderId);
+    return;
+  }
+
+  // Target folder is in current visible folders list
+  const existingFolder = folderStore.folders.find((f) => f.id === folderId);
+  if (existingFolder) {
+    folderStore.openFolder(existingFolder);
+    await galleryStore.fetchMedia(true, folderId);
+    return;
+  }
+
+  // Otherwise, load full hierarchy from API (deep link / browser history jump)
+  try {
+    await folderStore.loadFolderHierarchy(folderId);
+    await galleryStore.fetchMedia(true, folderId);
+  } catch (err) {
+    console.error('Gagal memuat folder dari route:', err);
+    handleNavigateRoot();
+  }
+}
+
+watch(
+  () => route.query.folder,
+  async (newFolderId, oldFolderId) => {
+    if (newFolderId === oldFolderId) return;
+    await syncFolderFromRoute(newFolderId as string | undefined);
+  }
+);
 
 onMounted(async () => {
   await Promise.all([
     authStore.fetchMe().catch(() => {}),
-    folderStore.fetchFolders(null).catch(() => {}),
-    galleryStore.fetchMedia(true, null).catch(() => {}),
   ]);
+
+  const initialFolderId = route.query.folder as string | undefined;
+  if (initialFolderId) {
+    try {
+      await folderStore.loadFolderHierarchy(initialFolderId);
+      await galleryStore.fetchMedia(true, initialFolderId);
+    } catch {
+      handleNavigateRoot();
+    }
+  } else {
+    await Promise.all([
+      folderStore.fetchFolders(null).catch(() => {}),
+      galleryStore.fetchMedia(true, null).catch(() => {}),
+    ]);
+  }
 });
 </script>
 

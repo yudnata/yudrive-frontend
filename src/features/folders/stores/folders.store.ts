@@ -68,22 +68,53 @@ export const useFolderStore = defineStore('folders', () => {
     }
   }
 
+  async function getFolderById(id: string): Promise<Folder> {
+    return await apiFetch<Folder>(`/folders/${id}`);
+  }
+
+  async function loadFolderHierarchy(folderId: string): Promise<Folder> {
+    const target = await getFolderById(folderId);
+    const chain: Folder[] = [target];
+    let parentId = target.parentId;
+
+    while (parentId) {
+      try {
+        const parent = await getFolderById(parentId);
+        chain.unshift(parent);
+        parentId = parent.parentId;
+      } catch {
+        break;
+      }
+    }
+
+    currentFolder.value = target;
+    breadcrumbs.value = chain;
+    await fetchFolders(target.id);
+    return target;
+  }
+
   function openFolder(folder: Folder): void {
     currentFolder.value = folder;
-    breadcrumbs.value.push(folder);
+    const existingIndex = breadcrumbs.value.findIndex((b) => b.id === folder.id);
+    if (existingIndex !== -1) {
+      breadcrumbs.value = breadcrumbs.value.slice(0, existingIndex + 1);
+    } else {
+      breadcrumbs.value.push(folder);
+    }
     fetchFolders(folder.id);
   }
 
-  function navigateToBreadcrumb(targetIndex: number): void {
+  function navigateToBreadcrumb(targetIndex: number): Folder | null {
     if (targetIndex < 0 || targetIndex >= breadcrumbs.value.length) {
       navigateToRoot();
-      return;
+      return null;
     }
 
     const target = breadcrumbs.value[targetIndex];
     currentFolder.value = target;
     breadcrumbs.value = breadcrumbs.value.slice(0, targetIndex + 1);
     fetchFolders(target.id);
+    return target;
   }
 
   function navigateToRoot(): void {
@@ -117,6 +148,8 @@ export const useFolderStore = defineStore('folders', () => {
     createFolder,
     updateFolder,
     deleteFolder,
+    getFolderById,
+    loadFolderHierarchy,
     openFolder,
     navigateToBreadcrumb,
     navigateToRoot,
