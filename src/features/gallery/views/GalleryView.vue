@@ -17,6 +17,7 @@ import GalleryEmptyState from '../components/GalleryEmptyState.vue';
 import FolderCard from '@/features/folders/components/FolderCard.vue';
 import CreateFolderModal from '@/features/folders/components/CreateFolderModal.vue';
 import FolderInfoModal from '@/features/folders/components/FolderInfoModal.vue';
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue';
 import UploadFAB from '@/features/upload/components/UploadFAB.vue';
 import UploadQueuePanel from '@/features/upload/components/UploadQueuePanel.vue';
 import MediaLightbox from '@/features/viewer/components/MediaLightbox.vue';
@@ -89,6 +90,9 @@ const isRenamingFolder = ref(false);
 const targetFolder = ref<FolderType | null>(null);
 const isFolderInfoOpen = ref(false);
 const infoTargetFolder = ref<FolderType | null>(null);
+const isDeleteConfirmOpen = ref(false);
+const folderToDelete = ref<FolderType | null>(null);
+const isDeletingFolder = ref(false);
 
 // Trigger infinite scroll when scrolling near bottom
 useIntersectionObserver(
@@ -152,14 +156,21 @@ async function handleCoverChanged(coverMediaId: string | null) {
   }
 }
 
-async function handleDeleteFolder(folder: FolderType) {
-  if (!confirm(`Hapus folder "${folder.name}"? File di dalamnya akan dipindahkan ke galeri utama.`)) {
-    return;
-  }
+function handleDeleteFolder(folder: FolderType) {
+  folderToDelete.value = folder;
+  isDeleteConfirmOpen.value = true;
+}
+
+async function confirmDeleteFolder() {
+  if (!folderToDelete.value) return;
+  const folder = folderToDelete.value;
+  isDeletingFolder.value = true;
   try {
     const isCurrent = folderStore.currentFolder?.id === folder.id;
     await folderStore.deleteFolder(folder.id);
-    toast.success('Folder berhasil dihapus.');
+    toast.success(`Folder "${folder.name}" berhasil dihapus.`);
+    isDeleteConfirmOpen.value = false;
+    folderToDelete.value = null;
     if (isCurrent) {
       handleNavigateRoot();
     } else {
@@ -167,6 +178,8 @@ async function handleDeleteFolder(folder: FolderType) {
     }
   } catch (err: any) {
     toast.error(`Gagal menghapus folder: ${err.message}`);
+  } finally {
+    isDeletingFolder.value = false;
   }
 }
 
@@ -574,6 +587,18 @@ onMounted(async () => {
       :folder="infoTargetFolder"
       @cover-changed="handleCoverChanged"
       @close="isFolderInfoOpen = false"
+    />
+
+    <ConfirmDialog
+      :is-open="isDeleteConfirmOpen"
+      :title="`Hapus Folder &quot;${folderToDelete?.name}&quot;?`"
+      message="File di dalamnya akan dipindahkan ke galeri utama."
+      confirm-text="Ya, Hapus Folder"
+      cancel-text="Batal"
+      variant="danger"
+      :is-loading="isDeletingFolder"
+      @confirm="confirmDeleteFolder"
+      @cancel="isDeleteConfirmOpen = false"
     />
   </div>
 </template>

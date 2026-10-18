@@ -119,7 +119,7 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
               <Edit2 class="w-3.5 h-3.5 text-muted" />
               <span>Ubah Nama</span>
             </button>
-            <div class="my-1 border-t border-border/40" />
+            <div class="my-1 mx-2 h-px bg-black/5 dark:bg-white/10" />
             <button
               type="button"
               class="w-full px-3 py-2 flex items-center gap-2 text-[#D64545] hover:bg-surface-tint transition-colors cursor-pointer"
