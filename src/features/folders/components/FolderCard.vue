@@ -82,7 +82,7 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
       <div ref="menuRef" class="absolute top-2 right-2 z-30">
         <button
           type="button"
-          class="w-7 h-7 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white flex items-center justify-center transition-colors focus:outline-none cursor-pointer"
+          class="w-8 h-8 sm:w-7 sm:h-7 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md text-white flex items-center justify-center transition-colors focus:outline-none cursor-pointer"
           aria-label="Menu opsi folder"
           @click="handleMenuClick"
         >
@@ -100,7 +100,7 @@ function onAction(action: 'info' | 'rename' | 'delete', event: Event) {
         >
           <div
             v-if="isMenuOpen"
-            class="absolute right-0 mt-1.5 w-44 py-1.5 rounded-2xl bg-surface shadow-2xl z-50 text-left text-xs ring-1 ring-black/5 dark:ring-white/10"
+            class="absolute right-0 mt-1.5 w-40 sm:w-44 py-1.5 rounded-2xl bg-surface shadow-2xl z-50 text-left text-xs ring-1 ring-black/5 dark:ring-white/10"
             @click.stop
           >
             <button

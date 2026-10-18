@@ -250,21 +250,21 @@ onMounted(async () => {
     </div>
 
     <!-- Main Explorer / Gallery Container -->
-    <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6">
+    <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 py-5 sm:py-7 space-y-6 pb-28">
       <!-- HERO SECTION AT TOP -->
       <GalleryHero v-if="!folderStore.currentFolder" />
 
       <!-- Breadcrumb Navigation Bar (Windows Explorer Style, Shadow-based) -->
       <nav
-        class="flex items-center justify-between gap-2 p-2.5 sm:p-3 rounded-2xl bg-surface shadow-soft-sm"
+        class="flex items-center justify-between gap-2 p-2 sm:p-2.5 rounded-2xl bg-surface shadow-soft-sm"
         aria-label="Navigasi folder"
       >
-        <div class="flex items-center gap-1.5 overflow-x-auto text-xs py-0.5">
+        <div class="flex-1 min-w-0 flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 text-xs">
           <!-- Back button if inside folder -->
           <button
             v-if="folderStore.currentFolder"
             type="button"
-            class="p-1.5 rounded-lg hover:bg-surface-tint text-muted hover:text-app transition-colors shrink-0 mr-1 cursor-pointer"
+            class="w-8 h-8 rounded-lg hover:bg-surface-tint text-muted hover:text-app flex items-center justify-center transition-colors shrink-0 cursor-pointer"
             aria-label="Kembali ke folder sebelumnya"
             @click="handleNavigateBreadcrumb(folderStore.breadcrumbs.length - 2)"
           >
@@ -274,12 +274,13 @@ onMounted(async () => {
           <!-- Root Galeri -->
           <button
             type="button"
-            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors font-medium shrink-0 cursor-pointer"
+            class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-colors font-medium shrink-0 cursor-pointer h-8"
             :class="!folderStore.currentFolder ? 'bg-surface-tint text-[#C93D68] dark:text-[#FF8FAE] font-semibold' : 'text-muted hover:text-app'"
             @click="handleNavigateRoot"
+            title="Semua Kenangan"
           >
-            <Home class="w-3.5 h-3.5" />
-            <span>Semua Kenangan</span>
+            <Home class="w-3.5 h-3.5 shrink-0" />
+            <span :class="folderStore.currentFolder ? 'hidden sm:inline' : 'inline'">Semua Kenangan</span>
           </button>
 
           <!-- Breadcrumb Segments -->
@@ -287,9 +288,10 @@ onMounted(async () => {
             <ChevronRight class="w-3.5 h-3.5 text-muted shrink-0" />
             <button
               type="button"
-              class="px-2 py-1 rounded-lg transition-colors font-medium truncate max-w-35 sm:max-w-50 shrink-0 cursor-pointer"
+              class="px-2.5 py-1.5 rounded-lg transition-colors font-medium truncate max-w-36 sm:max-w-56 shrink-0 cursor-pointer h-8"
               :class="idx === folderStore.breadcrumbs.length - 1 ? 'bg-surface-tint text-[#C93D68] dark:text-[#FF8FAE] font-semibold' : 'text-muted hover:text-app'"
               @click="handleNavigateBreadcrumb(idx)"
+              :title="b.name"
             >
               {{ b.name }}
             </button>
@@ -301,10 +303,11 @@ onMounted(async () => {
           type="button"
           variant="secondary"
           size="sm"
-          class="shrink-0 text-xs flex items-center gap-1.5 py-1.5 cursor-pointer"
+          class="shrink-0 text-xs flex items-center justify-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-xl cursor-pointer"
+          aria-label="Buat folder baru"
           @click="handleOpenCreateFolder"
         >
-          <FolderPlus class="w-3.5 h-3.5 text-[#C93D68] dark:text-[#FF8FAE]" />
+          <FolderPlus class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] shrink-0" />
           <span class="hidden sm:inline">Folder Baru</span>
         </Button>
       </nav>

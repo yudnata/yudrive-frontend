@@ -119,6 +119,16 @@
   transition: transform 200ms ease-out, box-shadow 200ms ease-out;
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .photo-card:hover {
     transform: translateY(-2px);

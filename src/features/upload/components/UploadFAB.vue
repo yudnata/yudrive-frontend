@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue';
+import { onClickOutside } from '@vueuse/core';
 import { useUploadStore } from '../stores/upload.store';
 import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { useToast } from '@/composables/useToast';
@@ -15,8 +16,13 @@ const toast = useToast();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const folderInputRef = ref<HTMLInputElement | null>(null);
+const fabContainerRef = ref<HTMLElement | null>(null);
 const isDraggingOverWindow = ref(false);
 const isMenuOpen = ref(false);
+
+onClickOutside(fabContainerRef, () => {
+  isMenuOpen.value = false;
+});
 
 let dragCounter = 0;
 
@@ -154,7 +160,10 @@ onUnmounted(() => {
     </div>
 
     <!-- Floating Action Speed Dial -->
-    <div class="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+    <div
+      ref="fabContainerRef"
+      class="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom,1.5rem))] right-4 sm:right-6 z-40 flex flex-col items-end gap-3"
+    >
       <!-- Speed Dial Menu (Expanded Options) -->
       <Transition
         enter-active-class="transition duration-150 ease-out"

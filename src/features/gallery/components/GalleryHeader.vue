@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import { onClickOutside } from '@vueuse/core';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
 import { useTheme } from '@/composables/useTheme';
@@ -9,6 +10,11 @@ const authStore = useAuthStore();
 const router = useRouter();
 const { theme, setTheme } = useTheme();
 const isMenuOpen = ref(false);
+const profileMenuRef = ref<HTMLElement | null>(null);
+
+onClickOutside(profileMenuRef, () => {
+  isMenuOpen.value = false;
+});
 
 function handleLogout() {
   authStore.logout();
@@ -36,7 +42,7 @@ function formatBytes(bytes?: number): string {
       </div>
 
       <!-- User Profile & Storage Menu -->
-      <div class="relative">
+      <div ref="profileMenuRef" class="relative">
         <button
           type="button"
           class="relative flex items-center gap-2 p-1 rounded-full shadow-sm hover:shadow hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] min-h-11 min-w-11 transition-all cursor-pointer"
@@ -58,7 +64,7 @@ function formatBytes(bytes?: number): string {
         <!-- Dropdown Popup -->
         <div
           v-if="isMenuOpen"
-          class="absolute right-0 mt-2 w-72 p-4 rounded-[20px] bg-surface shadow-xl z-40 text-left"
+          class="absolute right-0 mt-2 w-72 max-w-[calc(100vw-2rem)] p-4 rounded-[20px] bg-surface shadow-2xl z-40 text-left ring-1 ring-black/5 dark:ring-white/10"
         >
           <!-- User info: Bare icon -->
           <div class="flex items-center gap-3 pb-3 border-b border-transparent">
