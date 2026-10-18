@@ -164,6 +164,14 @@ export const useViewerStore = defineStore('viewer', () => {
     }
   }
 
+  async function moveCurrentItem(targetFolderId: string | null) {
+    if (!activeItem.value) return;
+    const mediaId = activeItem.value.id;
+    const updated = await galleryStore.moveMedia(mediaId, targetFolderId);
+    urlCache.delete(mediaId);
+    return updated;
+  }
+
   return {
     isOpen,
     currentMediaId,
@@ -183,5 +191,6 @@ export const useViewerStore = defineStore('viewer', () => {
     loadMediaUrl,
     refreshExpiredUrl,
     deleteCurrentItem,
+    moveCurrentItem,
   };
 });

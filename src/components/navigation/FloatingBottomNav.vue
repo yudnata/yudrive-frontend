@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 import { onClickOutside } from '@vueuse/core';
 import {
-  Sparkles,
+  Home,
   Folder as FolderIcon,
   CalendarHeart,
   Plus,
@@ -112,7 +112,7 @@ function handleAction(action: 'uploadFiles' | 'uploadFolder' | 'createFolder') {
         aria-label="Beranda kenangan"
         @click="emit('update:modelValue', 'home')"
       >
-        <Sparkles class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'home' }" />
+        <Home class="w-4 h-4 sm:w-4.5 sm:h-4.5 transition-transform" :class="{ 'scale-110': modelValue === 'home' }" />
         <span class="text-[9.5px] sm:text-[10px] tracking-tight">Beranda</span>
         <span
           v-if="modelValue === 'home'"

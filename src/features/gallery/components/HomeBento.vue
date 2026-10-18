@@ -5,7 +5,7 @@ import { useFolderStore } from '@/features/folders/stores/folders.store';
 import { apiFetch } from '@/services/api';
 import { MediaItem, Folder as FolderType } from '@/types';
 import {
-  Sparkles,
+  Home,
   Shuffle,
   Heart,
   Folder as FolderIcon,
@@ -132,7 +132,7 @@ onMounted(async () => {
     <div class="flex items-center justify-between">
       <div>
         <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
-          <Sparkles class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
+          <Home class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
           <span>Kilas Kenangan Kita</span>
         </h2>
         <p class="text-xs text-muted mt-0.5">

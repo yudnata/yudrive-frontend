@@ -32,7 +32,6 @@ import {
   ArrowLeft,
   ChevronRight,
   Home,
-  Images,
   Heart,
 } from 'lucide-vue-next';
 
@@ -505,7 +504,6 @@ onMounted(async () => {
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
-              <Images class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE]" />
               <span>Semua Kenangan Foto & Video</span>
             </h2>
             <p class="text-xs text-muted mt-0.5">
@@ -554,7 +552,6 @@ onMounted(async () => {
         <div class="flex items-center justify-between">
           <div>
             <h2 class="text-base sm:text-lg font-bold text-app flex items-center gap-2 tracking-tight">
-              <Heart class="w-4 h-4 text-[#C93D68] dark:text-[#FF8FAE] fill-current" />
               <span>Momen Terfavorit</span>
             </h2>
             <p class="text-xs text-muted mt-0.5">

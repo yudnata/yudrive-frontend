@@ -394,7 +394,7 @@ function formatBytes(bytes?: number): string {
         <div class="flex items-center gap-2">
           <Sparkles class="w-5 h-5 text-[#C93D68] dark:text-[#FF8FAE]" />
           <h3 class="text-base font-serif font-bold text-app">
-            Garis Waktu Kenangan Kita
+            Garis Waktu Kenangan
           </h3>
         </div>
         <button

@@ -4,8 +4,10 @@ import { useSwipe } from '@vueuse/core';
 import { useViewerStore } from '../stores/viewer.store';
 import { useGalleryStore } from '@/features/gallery/stores/gallery.store';
 import { useFavorites } from '@/features/gallery/composables/useFavorites';
+import { useToast } from '@/composables/useToast';
 import CustomVideoPlayer from './CustomVideoPlayer.vue';
 import DeleteConfirmModal from './DeleteConfirmModal.vue';
+import MoveToFolderModal from '@/features/folders/components/MoveToFolderModal.vue';
 import {
   X,
   ChevronLeft,
@@ -15,11 +17,13 @@ import {
   Heart,
   Calendar,
   RotateCw,
+  FolderInput,
 } from 'lucide-vue-next';
 
 const viewerStore = useViewerStore();
 const galleryStore = useGalleryStore();
 const { isFavorite, toggleFavorite } = useFavorites();
+const toast = useToast();
 
 const stageRef = ref<HTMLElement | null>(null);
 const isFavorited = computed(() => {
@@ -27,6 +31,8 @@ const isFavorited = computed(() => {
 });
 const isDeleting = ref(false);
 const showDeleteConfirm = ref(false);
+const showMoveModal = ref(false);
+const isMoving = ref(false);
 const imageError = ref(false);
 
 function handleToggleFavorite() {
@@ -76,11 +82,11 @@ watch(
 function handleKeydown(e: KeyboardEvent) {
   if (!viewerStore.isOpen) return;
 
-  if (e.key === 'Escape' && !showDeleteConfirm.value) {
+  if (e.key === 'Escape' && !showDeleteConfirm.value && !showMoveModal.value) {
     handleClose();
-  } else if (e.key === 'ArrowRight' && viewerStore.hasNext && !showDeleteConfirm.value) {
+  } else if (e.key === 'ArrowRight' && viewerStore.hasNext && !showDeleteConfirm.value && !showMoveModal.value) {
     viewerStore.next();
-  } else if (e.key === 'ArrowLeft' && viewerStore.hasPrev && !showDeleteConfirm.value) {
+  } else if (e.key === 'ArrowLeft' && viewerStore.hasPrev && !showDeleteConfirm.value && !showMoveModal.value) {
     viewerStore.prev();
   }
 }
@@ -103,6 +109,20 @@ async function confirmDelete() {
     showDeleteConfirm.value = false;
   } finally {
     isDeleting.value = false;
+  }
+}
+
+async function handleMoveMedia(targetFolderId: string | null) {
+  if (!viewerStore.activeItem) return;
+  isMoving.value = true;
+  try {
+    await viewerStore.moveCurrentItem(targetFolderId);
+    showMoveModal.value = false;
+    toast.success('Foto berhasil dipindahkan.');
+  } catch (err: any) {
+    toast.error(`Gagal memindahkan foto: ${err.message}`);
+  } finally {
+    isMoving.value = false;
   }
 }
 
@@ -198,6 +218,17 @@ onUnmounted(() => {
                 class="w-5 h-5 transition-transform"
                 :class="{ 'fill-current scale-110': isFavorited }"
               />
+            </button>
+
+            <!-- Move to Folder Button -->
+            <button
+              type="button"
+              class="p-2 rounded-full hover:bg-white/10 text-white/90 transition-colors min-h-11 min-w-11 flex items-center justify-center cursor-pointer"
+              aria-label="Pindahkan foto ke folder"
+              title="Pindahkan ke folder"
+              @click="showMoveModal = true"
+            >
+              <FolderInput class="w-5 h-5" />
             </button>
 
             <!-- Download Button -->
@@ -307,6 +338,15 @@ onUnmounted(() => {
       :is-deleting="isDeleting"
       @confirm="confirmDelete"
       @cancel="showDeleteConfirm = false"
+    />
+
+    <!-- Move To Folder Modal Dialog -->
+    <MoveToFolderModal
+      :is-open="showMoveModal"
+      :current-folder-id="viewerStore.activeItem?.folderId"
+      :is-loading="isMoving"
+      @move="handleMoveMedia"
+      @close="showMoveModal = false"
     />
   </Teleport>
 </template>

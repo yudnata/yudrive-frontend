@@ -104,6 +104,20 @@ export const useGalleryStore = defineStore('gallery', () => {
     items.value = items.value.filter((i) => i.id !== mediaId);
   }
 
+  async function moveMedia(mediaId: string, folderId: string | null): Promise<MediaItem> {
+    const updated = await apiFetch<MediaItem>(`/media/${mediaId}/move`, {
+      method: 'PATCH',
+      body: JSON.stringify({ folderId: folderId || null }),
+    });
+
+    const index = items.value.findIndex((i) => i.id === mediaId);
+    if (index !== -1) {
+      items.value[index] = { ...items.value[index], ...updated };
+    }
+
+    return updated;
+  }
+
   return {
     items,
     nextCursor,
@@ -114,5 +128,6 @@ export const useGalleryStore = defineStore('gallery', () => {
     fetchMedia,
     prependItem,
     removeItem,
+    moveMedia,
   };
 });
