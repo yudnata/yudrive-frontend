@@ -58,7 +58,6 @@ export const useGalleryStore = defineStore('gallery', () => {
   const searchQuery = ref('');
   const sortBy = ref<GallerySortOption>('date-desc');
   const mediaTypeFilter = ref<'all' | 'photo' | 'video'>('all');
-  const authorFilter = ref<'all' | 'yudhi' | 'wina'>('all');
 
   // Filtered and sorted items based on searchQuery, filters & active sortBy
   const filteredItems = computed<MediaItem[]>(() => {
@@ -89,13 +88,6 @@ export const useGalleryStore = defineStore('gallery', () => {
       list = list.filter((item) => item.type === mediaTypeFilter.value);
     }
 
-    if (authorFilter.value !== 'all') {
-      list = list.filter((item) => {
-        const name = (item.ownerName || '').toLowerCase();
-        const email = (item.ownerEmail || '').toLowerCase();
-        return name.includes(authorFilter.value) || email.includes(authorFilter.value);
-      });
-    }
 
     // Sort items
     return [...list].sort((a, b) => {
@@ -417,9 +409,6 @@ export const useGalleryStore = defineStore('gallery', () => {
         queryParams.set('type', mediaTypeFilter.value);
       }
 
-      if (authorFilter.value && authorFilter.value !== 'all') {
-        queryParams.set('author', authorFilter.value);
-      }
 
       if (sortBy.value) {
         queryParams.set('sortBy', sortBy.value);
@@ -515,7 +504,6 @@ export const useGalleryStore = defineStore('gallery', () => {
     searchQuery,
     sortBy,
     mediaTypeFilter,
-    authorFilter,
     filteredItems,
     nextCursor,
     hasMore,

@@ -223,7 +223,6 @@ const hasActiveGalleryFilters = computed(() => {
   return (
     !!galleryStore.searchQuery.trim() ||
     galleryStore.mediaTypeFilter !== 'all' ||
-    galleryStore.authorFilter !== 'all' ||
     galleryStore.sortBy !== 'date-desc'
   );
 });
@@ -231,7 +230,6 @@ const hasActiveGalleryFilters = computed(() => {
 function handleResetGalleryFilters() {
   galleryStore.searchQuery = '';
   galleryStore.mediaTypeFilter = 'all';
-  galleryStore.authorFilter = 'all';
   galleryStore.sortBy = 'date-desc';
 }
 
@@ -251,7 +249,7 @@ watch(
 );
 
 watch(
-  [() => galleryStore.mediaTypeFilter, () => galleryStore.authorFilter, () => galleryStore.sortBy],
+  [() => galleryStore.mediaTypeFilter, () => galleryStore.sortBy],
   () => {
     const targetFolderId = activeTab.value === 'folders' ? folderStore.currentFolder?.id : null;
     galleryStore.fetchMedia(true, targetFolderId);
@@ -976,75 +974,41 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Filter Pills Bar: Media Type & Author (Server-Side Filtered) -->
+        <!-- Filter Pills Bar: Media Type (Server-Side Filtered) -->
         <div class="flex flex-wrap items-center justify-between gap-2.5 pt-1">
-          <div class="flex flex-wrap items-center gap-2">
-            <!-- Media Type Filter Pills -->
-            <div
-              class="flex items-center gap-1 p-1 rounded-2xl bg-white dark:bg-surface shadow-soft-xs border border-black/5 dark:border-white/10 text-xs font-semibold"
-              role="radiogroup"
-              aria-label="Filter tipe media"
+          <!-- Media Type Filter Pills -->
+          <div
+            class="flex items-center gap-1 p-1 rounded-2xl bg-white dark:bg-surface shadow-soft-xs border border-black/5 dark:border-white/10 text-xs font-semibold"
+            role="radiogroup"
+            aria-label="Filter tipe media"
+          >
+            <button
+              type="button"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
+              :class="galleryStore.mediaTypeFilter === 'all' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
+              @click="galleryStore.mediaTypeFilter = 'all'"
             >
-              <button
-                type="button"
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                :class="galleryStore.mediaTypeFilter === 'all' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
-                @click="galleryStore.mediaTypeFilter = 'all'"
-              >
-                <Sparkles class="w-3.5 h-3.5" />
-                <span>Semua</span>
-              </button>
-              <button
-                type="button"
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                :class="galleryStore.mediaTypeFilter === 'photo' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
-                @click="galleryStore.mediaTypeFilter = 'photo'"
-              >
-                <ImageIcon class="w-3.5 h-3.5" />
-                <span>Foto</span>
-              </button>
-              <button
-                type="button"
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                :class="galleryStore.mediaTypeFilter === 'video' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
-                @click="galleryStore.mediaTypeFilter = 'video'"
-              >
-                <FilmIcon class="w-3.5 h-3.5" />
-                <span>Video</span>
-              </button>
-            </div>
-
-            <!-- Author Filter Pills (Universal Couple Filters: Semua, Yudhi, Wina) -->
-            <div
-              class="flex items-center gap-1 p-1 rounded-2xl bg-white dark:bg-surface shadow-soft-xs border border-black/5 dark:border-white/10 text-xs font-semibold"
-              role="radiogroup"
-              aria-label="Filter pengunggah"
+              <Sparkles class="w-3.5 h-3.5" />
+              <span>Semua</span>
+            </button>
+            <button
+              type="button"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
+              :class="galleryStore.mediaTypeFilter === 'photo' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
+              @click="galleryStore.mediaTypeFilter = 'photo'"
             >
-              <button
-                type="button"
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                :class="galleryStore.authorFilter === 'all' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
-                @click="galleryStore.authorFilter = 'all'"
-              >
-                <span>Semua Pengunggah</span>
-              </button>
-              <button
-                type="button"
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                :class="galleryStore.authorFilter === 'yudhi' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
-                @click="galleryStore.authorFilter = 'yudhi'"
-              >
-                <span>Yudhi</span>
-              </button>
-              <button
-                type="button"
-                class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
-                :class="galleryStore.authorFilter === 'wina' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
-                @click="galleryStore.authorFilter = 'wina'"
-              >
-                <span>Wina</span>
-              </button>
-            </div>
+              <ImageIcon class="w-3.5 h-3.5" />
+              <span>Foto</span>
+            </button>
+            <button
+              type="button"
+              class="px-2.5 sm:px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer select-none"
+              :class="galleryStore.mediaTypeFilter === 'video' ? 'bg-[#C93D68] text-white shadow-xs font-bold' : 'text-muted hover:text-app hover:bg-surface-tint'"
+              @click="galleryStore.mediaTypeFilter = 'video'"
+            >
+              <FilmIcon class="w-3.5 h-3.5" />
+              <span>Video</span>
+            </button>
           </div>
 
           <!-- Quick Reset Filter CTA Button if filters active -->
@@ -1072,9 +1036,6 @@ onMounted(async () => {
             </span>
             <span v-if="galleryStore.mediaTypeFilter !== 'all'" class="font-semibold text-app px-2 py-0.5 rounded-lg bg-surface shadow-soft-xs capitalize">
               Tipe: {{ galleryStore.mediaTypeFilter === 'photo' ? 'Foto' : 'Video' }}
-            </span>
-            <span v-if="galleryStore.authorFilter !== 'all'" class="font-semibold text-app px-2 py-0.5 rounded-lg bg-surface shadow-soft-xs capitalize">
-              Pengunggah: {{ galleryStore.authorFilter === 'yudhi' ? 'Yudhi' : 'Wina' }}
             </span>
             <span class="text-[11px] text-[#C93D68] dark:text-[#FF8FAE] font-bold">
               ({{ galleryStore.filteredItems.length }} kenangan ditemukan)
@@ -1111,7 +1072,7 @@ onMounted(async () => {
             Tidak ada kenangan yang sesuai filter
           </h3>
           <p class="text-xs text-muted max-w-sm mx-auto">
-            Tidak ditemukan foto atau video yang cocok di seluruh galeri. Coba ubah kata kunci pencarian, tipe media, atau pengunggah.
+            Tidak ditemukan foto atau video yang cocok di seluruh galeri. Coba ubah kata kunci pencarian atau tipe media.
           </p>
           <button
             type="button"
