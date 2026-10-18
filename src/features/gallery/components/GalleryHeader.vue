@@ -2,10 +2,12 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/features/auth/stores/auth.store';
-import { Heart, LogOut, HardDrive, User as UserIcon } from 'lucide-vue-next';
+import { useTheme } from '@/composables/useTheme';
+import { Heart, LogOut, HardDrive, User as UserIcon, Sun, Moon, Laptop, AlertCircle } from 'lucide-vue-next';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const { theme, setTheme } = useTheme();
 const isMenuOpen = ref(false);
 
 function handleLogout() {
@@ -39,13 +41,20 @@ function formatBytes(bytes?: number): string {
       <div class="relative">
         <button
           type="button"
-          class="flex items-center gap-2 p-1.5 rounded-full border border-app hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] min-h-[44px] min-w-[44px] transition-colors"
-          aria-label="Menu profil dan penyimpanan"
+          class="relative flex items-center gap-2 p-1.5 rounded-full border border-app hover:bg-surface-tint focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FFD9E3] min-h-[44px] min-w-[44px] transition-colors"
+          aria-label="Menu profil dan pengaturan tampilan"
           @click="isMenuOpen = !isMenuOpen"
         >
           <div class="w-8 h-8 rounded-full bg-surface-tint border border-app flex items-center justify-center text-xs font-semibold text-[#C93D68] dark:text-[#FF8FAE]">
             {{ authStore.user?.name ? authStore.user.name.charAt(0).toUpperCase() : 'U' }}
           </div>
+
+          <!-- Quota alert badge on avatar button if >= 80% -->
+          <span
+            v-if="(authStore.usage?.percentage || 0) >= 80"
+            class="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#D64545] border-2 border-surface"
+            aria-label="Penyimpanan hampir penuh"
+          />
         </button>
 
         <!-- Dropdown Popup -->
@@ -93,10 +102,45 @@ function formatBytes(bytes?: number): string {
 
             <p
               v-if="(authStore.usage?.percentage || 0) >= 80"
-              class="text-[11px] text-[#D64545] font-medium mt-1.5"
+              class="text-[11px] text-[#D64545] font-medium mt-1.5 flex items-center gap-1"
             >
+              <AlertCircle class="w-3.5 h-3.5 shrink-0" />
               Kapasitas penyimpanan hampir penuh ({{ authStore.usage?.percentage }}%).
             </p>
+          </div>
+
+          <!-- Theme Preference Selector -->
+          <div class="py-3 border-b border-app">
+            <p class="text-xs font-medium text-app mb-2">Tema Tampilan</p>
+            <div class="grid grid-cols-3 gap-1.5 bg-surface-tint p-1 rounded-[12px] border border-app">
+              <button
+                type="button"
+                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-[8px] text-[11px] font-medium transition-colors min-h-[36px]"
+                :class="theme === 'system' ? 'bg-surface text-app shadow-soft-sm' : 'text-muted hover:text-app'"
+                @click="setTheme('system')"
+              >
+                <Laptop class="w-3 h-3" />
+                Auto
+              </button>
+              <button
+                type="button"
+                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-[8px] text-[11px] font-medium transition-colors min-h-[36px]"
+                :class="theme === 'light' ? 'bg-surface text-app shadow-soft-sm' : 'text-muted hover:text-app'"
+                @click="setTheme('light')"
+              >
+                <Sun class="w-3 h-3" />
+                Terang
+              </button>
+              <button
+                type="button"
+                class="flex items-center justify-center gap-1 py-1.5 px-2 rounded-[8px] text-[11px] font-medium transition-colors min-h-[36px]"
+                :class="theme === 'dark' ? 'bg-surface text-app shadow-soft-sm' : 'text-muted hover:text-app'"
+                @click="setTheme('dark')"
+              >
+                <Moon class="w-3 h-3" />
+                Gelap
+              </button>
+            </div>
           </div>
 
           <!-- Logout Action -->

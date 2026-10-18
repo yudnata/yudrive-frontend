@@ -14,6 +14,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(email: string, password: string): Promise<void> {
     isLoading.value = true;
+    isColdStarting.value = false;
+
+    // Detect if Azure server is in cold start (>2.5s)
+    const coldStartTimer = setTimeout(() => {
+      if (isLoading.value) {
+        isColdStarting.value = true;
+      }
+    }, 2500);
+
     try {
       const data = await apiFetch<{ token: string; user: User }>('/auth/login', {
         method: 'POST',
@@ -26,7 +35,9 @@ export const useAuthStore = defineStore('auth', () => {
 
       await fetchMe();
     } finally {
+      clearTimeout(coldStartTimer);
       isLoading.value = false;
+      isColdStarting.value = false;
     }
   }
 

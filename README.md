@@ -1,4 +1,4 @@
-# Our Memories — Frontend Web App
+# Our Memories - Frontend Web App
 
 Aplikasi web privat Vue 3 + Vite + TypeScript untuk Our Memories.
 
